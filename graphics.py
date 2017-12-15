@@ -44,7 +44,8 @@ class Figure:
 #        self.button.clicked.connect(self.colorize)
 
     def fitAffine(self):
-        xydata = plt.gca().get_lines()[0].get_xydata()
+        ax = plt.gca()
+        xydata = ax.get_lines()[0].get_xydata()
         f = lambda x, *p : p[0] * x + p[1]
         popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=(0, 0))
         print('Param: {0}x + {1}'.format(popt[0], popt[1]))
