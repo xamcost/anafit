@@ -10,29 +10,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import functools
+import dill as pickle # mandatory to import pickle like this to pickle lambdas
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-
-
-def get_func(strfunc=None, typefunc=None):
-    linlist = {'ax':(lambda x, a : a*x), 
-                'ax+b':(lambda x, a, b : a*x+b), 
-                'a(x-b)':(lambda x, a, b : a*(x-b))}
-    powerlist = {'ax^n':(lambda x, a, n : a*(x**n)), 
-                'c+ax^n':(lambda x, c, a, n : c+a*(x**n)), 
-                'a(x-b)^n':(lambda x, a, b, n : a*((x-b)**n)), 
-                'c+a(x-b)^n':(lambda x, c, a, b, n : c+a*((x-b)**n))}
-    funclist = {**linlist, **powerlist}
-    if strfunc is None:
-        if typefunc is None:
-            return funclist
-        elif typefunc == 'linear':
-            return linlist
-        elif typefunc == 'power':
-            return powerlist
-    else:
-        return funclist[strfunc]
 
 
 class Figure:
@@ -69,20 +50,19 @@ class Figure:
         
         self.linearFitMenu = QMenu('Linear')
         self.basicFitMenu.addMenu(self.linearFitMenu)
-        for fname in get_func(typefunc='linear').keys():
+        for fname in self.get_func(typefunc='linear').keys():
             self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
         self.powerFitMenu = QMenu('Power')
         self.basicFitMenu.addMenu(self.powerFitMenu)
-        for fname in get_func(typefunc='power').keys():
+        for fname in self.get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
         
         self.customFitMenu = QMenu('Custom fit')
         self.menu.addMenu(self.customFitMenu)
-        self.testAction = QAction('Colorize', self.customFitMenu)
-        self.testAction.triggered.connect(self.colorize)
-        self.customFitMenu.addAction(self.testAction)
-        
-#        self.button.clicked.connect(self.colorize)
+        for fname in self.get_func(typefunc='custom').keys():
+            self.customFitMenu.addAction(fname, functools.partial(self.fit, fname))
+        self.customFitMenu.addSeparator()
+        self.customFitMenu.addAction('New Fit', self.new_customFit)
         
     @property
     def fig(self):
@@ -116,12 +96,43 @@ class Figure:
 
     def fit(self, strfunc):
         xydata = self._dictlin[self._currentLine].get_xydata()
-        f = get_func(strfunc)
-        popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=tuple(np.zeros(f.__code__.co_argcount - 1)))
+        f, p = self.get_func(strfunc)
+#        popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=tuple(np.zeros(f.__code__.co_argcount - 1)))
+        popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=p)
         self._lastFit.update({'curve':self._currentLine ,'xrange':xydata[:, 0], 'name':strfunc, 'coef':popt, 'cov':pcov})
         self._dictlin[self._currentLine].get_axes().plot(xydata[:, 0], list(map(lambda x : f(x, *popt), xydata[:, 0])), 'r-')
         self.fig.canvas.draw()
         
+    def get_func(self, strfunc=None, typefunc=None):
+        linlist = {'ax':(lambda x, a : a*x, (1)), 
+                    'ax+b':(lambda x, a, b : a*x+b, (1, 1)), 
+                    'a(x-b)':(lambda x, a, b : a*(x-b), (1, 1))}
+        powerlist = {'ax^n':(lambda x, a, n : a*(x**n), (1, 1)), 
+                    'a+bx^n':(lambda x, a, c, n : a+b*(x**n), (1, 1, 1)), 
+                    'a(x-b)^n':(lambda x, a, b, n : a*((x-b)**n), (1, 1, 1)), 
+                    'a+b(x-c)^n':(lambda x, a, b, c, n : a+b*((x-c)**n), (1, 1, 1, 1))}
+        fid = open(os.path.join(self.script_path, 'customFit.pkl'), 'rb')
+        customlist = pickle.load(fid)
+        fid.close()
+        funclist = {**linlist, **powerlist, **customlist}
+        if strfunc is None:
+            if typefunc is None:
+                return funclist
+            elif typefunc == 'linear':
+                return linlist
+            elif typefunc == 'power':
+                return powerlist
+            elif typefunc == 'custom':
+                return customlist
+        else:
+            return funclist[strfunc]
+    
+    def new_customFit(self):
+        # TODO: create a QDialog that ask for the function
+#        fid = open(os.path.join(self.script_path, 'customFit.pkl'),'wb')
+#        pickle.dump(self._customFit, fid)
+#        fid.close()
+        pass
 
     def colorize(self):
         colors = ["black", "blue", "red", "green"]
