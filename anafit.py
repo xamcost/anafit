@@ -16,6 +16,33 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from customFitDialog import Ui_customFitDialog
 
+# global variable
+script_path = os.path.dirname(os.path.abspath(__file__))
+
+def get_func(strfunc=None, typefunc=None):
+        linlist = {'ax':(lambda x, a : a*x, (1)), 
+                    'ax+b':(lambda x, a, b : a*x+b, (1, 1)), 
+                    'a(x-b)':(lambda x, a, b : a*(x-b), (1, 1))}
+        powerlist = {'ax^n':(lambda x, a, n : a*(x**n), (1, 1)), 
+                    'a+bx^n':(lambda x, a, c, n : a+b*(x**n), (1, 1, 1)), 
+                    'a(x-b)^n':(lambda x, a, b, n : a*((x-b)**n), (1, 1, 1)), 
+                    'a+b(x-c)^n':(lambda x, a, b, c, n : a+b*((x-c)**n), (1, 1, 1, 1))}
+        fid = open(os.path.join(script_path, 'customFit.pkl'), 'rb')
+        customlist = pickle.load(fid)
+        fid.close()
+        funclist = {**linlist, **powerlist, **customlist}
+        if strfunc is None:
+            if typefunc is None:
+                return funclist
+            elif typefunc == 'linear':
+                return linlist
+            elif typefunc == 'power':
+                return powerlist
+            elif typefunc == 'custom':
+                return customlist
+        else:
+            return funclist[strfunc]
+
 
 class CustomFitDialog(Ui_customFitDialog):
     def __init__(self, dialog):
@@ -25,6 +52,63 @@ class CustomFitDialog(Ui_customFitDialog):
 
     def cancelbutton(self):
         exit()
+        
+class Fit(object):
+    def __init__(self, xydata, fname, p=None):
+        self._xydata = xydata
+        self._fname = fname
+        if p is None:
+            self._f, self._p = get_func(self._fname)
+        else: 
+            self._f, _ = get_func(self._fname)
+        self.fit()
+          
+    @property
+    def xydata(self):
+        return self._xydata
+    
+    @xydata.setter
+    def xydata(self, xydata):
+        self.__init__(xydata, self._fname)
+        
+    @property
+    def fname(self):
+        return self._fname
+    
+    @fname.setter
+    def fname(self, fname):
+        self.__init__(self._xydata, fname)
+        
+    @property
+    def f(self):
+        return self._f
+    
+    @property
+    def p(self):
+        return self._p
+    
+    @p.setter
+    def p(self, p):
+        self.__init__(self._xydata, self._fname, p)
+        
+    @property
+    def popt(self):
+        return self._popt
+    
+    @property
+    def pcov(self):
+        return self._pcov
+    
+    def fit(self):
+        self._popt, self._pcov = curve_fit(self._f, self._xydata[:, 0], self._xydata[:, 1], 
+                                           p0=self._p)
+        
+    def __repr__(self):
+        xrange = 'Xrange : [{0}, {1}]'.format(np.min(self._xydata[:,0]), np.max(self._xydata[:,0]))
+        fit = 'Fitting function : ' + self._fname
+        init = 'Initialising parameters : {0}'.format(self._p)
+        coef = 'Coeff. : {0}'.format(self._popt)
+        return xrange + '\n' + fit +'\n' + init +'\n' + coef    
 
 class Figure:
     def __init__(self, fig=None):
@@ -41,7 +125,7 @@ class Figure:
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
         self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.button.setIcon(QIcon(os.path.join(self.script_path, 'ana_icon.png')))
+        self.button.setIcon(QIcon(os.path.join(script_path, 'ana_icon.png')))
         self.button.setPopupMode(2)
         self.menu = QMenu()
         self.button.setMenu(self.menu)
@@ -62,16 +146,16 @@ class Figure:
         
         self.linearFitMenu = QMenu('Linear')
         self.basicFitMenu.addMenu(self.linearFitMenu)
-        for fname in self.get_func(typefunc='linear').keys():
+        for fname in get_func(typefunc='linear').keys():
             self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
         self.powerFitMenu = QMenu('Power')
         self.basicFitMenu.addMenu(self.powerFitMenu)
-        for fname in self.get_func(typefunc='power').keys():
+        for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
         
         self.customFitMenu = QMenu('Custom fit')
         self.menu.addMenu(self.customFitMenu)
-        for fname in self.get_func(typefunc='custom').keys():
+        for fname in get_func(typefunc='custom').keys():
             self.customFitMenu.addAction(fname, functools.partial(self.fit, fname))
         self.customFitMenu.addSeparator()
         self.customFitMenu.addAction('New Fit', self.new_customFit)
@@ -101,43 +185,12 @@ class Figure:
     @property
     def lastFit(self):
         return self._lastFit
-    
-    @lastFit.setter
-    def lastFit(self, lastFit):
-        self._lastFit = lastFit
-
-    def fit(self, strfunc):
-        xydata = self._dictlin[self._currentLine].get_xydata()
-        f, p = self.get_func(strfunc)
-#        popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=tuple(np.zeros(f.__code__.co_argcount - 1)))
-        popt, pcov = curve_fit(f, xydata[:, 0], xydata[:, 1], p0=p)
-        self._lastFit.update({'curve':self._currentLine ,'xrange':xydata[:, 0], 'name':strfunc, 'coef':popt, 'cov':pcov})
-        self._dictlin[self._currentLine].get_axes().plot(xydata[:, 0], list(map(lambda x : f(x, *popt), xydata[:, 0])), 'r-')
-        self.fig.canvas.draw()
         
-    def get_func(self, strfunc=None, typefunc=None):
-        linlist = {'ax':(lambda x, a : a*x, (1)), 
-                    'ax+b':(lambda x, a, b : a*x+b, (1, 1)), 
-                    'a(x-b)':(lambda x, a, b : a*(x-b), (1, 1))}
-        powerlist = {'ax^n':(lambda x, a, n : a*(x**n), (1, 1)), 
-                    'a+bx^n':(lambda x, a, c, n : a+b*(x**n), (1, 1, 1)), 
-                    'a(x-b)^n':(lambda x, a, b, n : a*((x-b)**n), (1, 1, 1)), 
-                    'a+b(x-c)^n':(lambda x, a, b, c, n : a+b*((x-c)**n), (1, 1, 1, 1))}
-        fid = open(os.path.join(self.script_path, 'customFit.pkl'), 'rb')
-        customlist = pickle.load(fid)
-        fid.close()
-        funclist = {**linlist, **powerlist, **customlist}
-        if strfunc is None:
-            if typefunc is None:
-                return funclist
-            elif typefunc == 'linear':
-                return linlist
-            elif typefunc == 'power':
-                return powerlist
-            elif typefunc == 'custom':
-                return customlist
-        else:
-            return funclist[strfunc]
+    def fit(self, strfunc):
+        lin = self._dictlin[self._currentLine]
+        self._lastFit = Fit(lin.get_xydata(), strfunc)
+        lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
+        self.fig.canvas.draw()
     
     def new_customFit(self):
         # TODO: create a QDialog that ask for the function
