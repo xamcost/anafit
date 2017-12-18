@@ -14,7 +14,17 @@ import dill as pickle # mandatory to import pickle like this to pickle lambdas
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+from customFitDialog import Ui_customFitDialog
 
+
+class CustomFitDialog(Ui_customFitDialog):
+    def __init__(self, dialog):
+        Ui_customFitDialog.__init__(self)
+        self.setupUi(dialog)
+        self.customFitButtonBox.rejected.connect(self.cancelbutton)
+
+    def cancelbutton(self):
+        exit()
 
 class Figure:
     def __init__(self, fig=None):
@@ -25,6 +35,8 @@ class Figure:
         self._dictlin = {(lin.get_color() + lin.get_marker()):lin for axe in self._ax for lin in axe.get_lines()}
         self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
         self._lastFit = {}
+        self.cfDialog = QDialog()
+        _ = CustomFitDialog(self.cfDialog)
         
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
@@ -129,10 +141,10 @@ class Figure:
     
     def new_customFit(self):
         # TODO: create a QDialog that ask for the function
+        self.cfDialog.show()
 #        fid = open(os.path.join(self.script_path, 'customFit.pkl'),'wb')
 #        pickle.dump(self._customFit, fid)
 #        fid.close()
-        pass
 
     def colorize(self):
         colors = ["black", "blue", "red", "green"]
