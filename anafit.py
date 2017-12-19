@@ -16,17 +16,24 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from customFitDialog import Ui_customFitDialog
 
+
 # global variable
 script_path = os.path.dirname(os.path.abspath(__file__))
 
+
+def pkl_save(var, path):
+    fid = open(path,'wb')
+    pickle.dump(var, fid)
+    fid.close()
+
 def get_func(strfunc=None, typefunc=None):
-        linlist = {'ax':(lambda x, a : a*x, (1)), 
-                    'ax+b':(lambda x, a, b : a*x+b, (1, 1)), 
-                    'a(x-b)':(lambda x, a, b : a*(x-b), (1, 1))}
-        powerlist = {'ax^n':(lambda x, a, n : a*(x**n), (1, 1)), 
-                    'a+bx^n':(lambda x, a, c, n : a+b*(x**n), (1, 1, 1)), 
-                    'a(x-b)^n':(lambda x, a, b, n : a*((x-b)**n), (1, 1, 1)), 
-                    'a+b(x-c)^n':(lambda x, a, b, c, n : a+b*((x-c)**n), (1, 1, 1, 1))}
+        linlist = {'ax':('lambda x, a : a*x', (1)), 
+                    'ax+b':('lambda x, a, b : a*x+b', (1, 1)), 
+                    'a(x-b)':('lambda x, a, b : a*(x-b)', (1, 1))}
+        powerlist = {'ax^n':('lambda x, a, n : a*(x**n)', (1, 1)), 
+                    'a+bx^n':('lambda x, a, c, n : a+b*(x**n)', (1, 1, 1)), 
+                    'a(x-b)^n':('lambda x, a, b, n : a*((x-b)**n)', (1, 1, 1)), 
+                    'a+b(x-c)^n':('lambda x, a, b, c, n : a+b*((x-c)**n)', (1, 1, 1, 1))}
         fid = open(os.path.join(script_path, 'customFit.pkl'), 'rb')
         customlist = pickle.load(fid)
         fid.close()
@@ -45,15 +52,21 @@ def get_func(strfunc=None, typefunc=None):
 
 
 class CustomFitDialog(Ui_customFitDialog):
-    def __init__(self, dialog):
+    def __init__(self, dialog, fname=None):
         Ui_customFitDialog.__init__(self)
         self.setupUi(dialog)
         self.customFitButtonBox.rejected.connect(self.cancelbutton)
         self.customFitButtonBox.accepted.connect(self.ok)
+        if fname is not None:
+            dialog.setWindowTitle('Edit Fit')
+            f, p = get_func(strfunc=fname)
+            self.customFitName.setText(fname)
+            self.customFitDef.setText(f)
+            self.customFitInit.setText(str(p))
         
     def ok(self):
         self.fname = self.customFitName.text()
-        self.f = eval(self.customFitDef.text())
+        self.f = self.customFitDef.text()
         self.p = eval(self.customFitInit.text())
 
     def cancelbutton(self):
@@ -65,9 +78,12 @@ class Fit(object):
         self._fname = fname
         if ';'  not in fname:
             if p is None:
-                self._f, self._p = get_func(self._fname)
+                fstr, self._p = get_func(self._fname)
+                self._f = eval(fstr)
             else: 
-                self._f, _ = get_func(self._fname)
+                fstr, _ = get_func(self._fname)
+                self._f = eval(fstr)
+                self._p = p
         else:
             fstr, pstr = fname.split(';')
             self._f = eval(fstr)
@@ -131,8 +147,7 @@ class Figure:
         self._dictlin = {(lin.get_color() + lin.get_marker()):lin for axe in self._ax for lin in axe.get_lines()}
         self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
         self._lastFit = {}
-        self.cfDialog = QDialog()
-        self.customFitDialog = CustomFitDialog(self.cfDialog)
+        self._linFit = []
         
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
@@ -142,6 +157,10 @@ class Figure:
         self.menu = QMenu()
         self.button.setMenu(self.menu)
         toolbar.addWidget(self.button)
+        
+        self.menu.addAction('Undo Fit', self.undo_fit)
+        self.menu.addAction('Remove all fit', self.remove_all_fit)
+        self.menu.addSeparator()
         
         self.datasetMenu = QMenu('Dataset')
         self.menu.addMenu(self.datasetMenu)
@@ -155,6 +174,8 @@ class Figure:
         
         self.showFitMenu = QMenu('Show Fit')
         self.menu.addMenu(self.showFitMenu)
+        self.editFitMenu = QMenu('Edit User Fit')
+        self.menu.addMenu(self.editFitMenu)
         
         self.linearFitMenu = QMenu('Linear')
         self.showFitMenu.addMenu(self.linearFitMenu)
@@ -165,25 +186,28 @@ class Figure:
         for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
         self.showFitMenu.addSeparator()
-        for fname in get_func(typefunc='custom').keys():
-            self.showFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        self.showFitMenu.addSeparator()
-        self.otherFitAction = QAction('Other Fit...', self.showFitMenu)
-        self.otherFitAction.triggered.connect(self.other_fit)
-        self.showFitMenu.addAction(self.otherFitAction)
         
-        self.editFitMenu = QMenu('Edit User Fit')
-        self.menu.addMenu(self.editFitMenu)
+        self.showCustomFitActionGroup = QActionGroup(self.showFitMenu)
+        self.showCustomFitActions = {}
         for fname in get_func(typefunc='custom').keys():
-            self.editFitMenu.addAction(fname, self.edit_fit)
+            self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
+            self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
+            self.showCustomFitActionGroup.addAction(self.showCustomFitActions[fname])
+        self.showFitMenu.addActions(self.showCustomFitActionGroup.actions())
+        self.showFitSep = self.showFitMenu.addSeparator()
+        self.showFitMenu.addAction('Other Fit...', self.other_fit)
+        
+        self.editFitActionGroup = QActionGroup(self.showFitMenu)
+        self.editFitActions = {}
+        for fname in get_func(typefunc='custom').keys():
+            self.editFitActions[fname] = QAction(fname, self.editFitActionGroup)
+            self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
+            self.editFitActionGroup.addAction(self.editFitActions[fname])
+        self.editFitMenu.addActions(self.editFitActionGroup.actions())
+        self.editFitSep = self.editFitMenu.addSeparator()
+        self.editFitMenu.addAction('New Fit', self.new_fit)
         self.editFitMenu.addSeparator()
-        self.newFitAction = QAction('New Fit', self.editFitMenu)
-        self.newFitAction.triggered.connect(self.new_customFit)
-        self.editFitMenu.addAction(self.newFitAction)
-        self.editFitMenu.addSeparator()
-        self.resetFitAction = QAction('Reset', self.editFitMenu)
-        self.resetFitAction.triggered.connect(self.reset_fit)
-        self.editFitMenu.addAction(self.resetFitAction)
+        self.editFitMenu.addAction('Reset', self.reset_fit)
         
     @property
     def fig(self):
@@ -210,11 +234,32 @@ class Figure:
     @property
     def lastFit(self):
         return self._lastFit
+    
+    def undo_fit(self):
+        self._linFit[-1][0].remove()
+        del self._linFit[-1]
+        self.fig.canvas.draw()
+        
+    def remove_all_fit(self):
+        for lin in self._linFit:
+            lin[0].remove()
+        self._linFit = []
+        self.fig.canvas.draw()
+    
+    def add_fit_in_menu(self, fname):
+        self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
+        self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
+        self.showFitMenu.insertAction(self.showFitSep, self.showCustomFitActions[fname])
+        
+        self.editFitActions[fname] = QAction(fname, self.editFitActionGroup)
+        self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
+        self.editFitMenu.insertAction(self.editFitSep, self.editFitActions[fname])
         
     def fit(self, strfunc):
         lin = self._dictlin[self._currentLine]
         self._lastFit = Fit(lin.get_xydata(), strfunc)
-        lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
+        linfit = lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
+        self._linFit.append(linfit)
         print(self._lastFit)
         self.fig.canvas.draw()
         
@@ -227,29 +272,41 @@ class Figure:
         else:
             pass
     
-    def edit_fit(self):
-        # TODO:
-        pass
-    
-    def new_customFit(self):
-        # TODO: test this function
-        self.cfDialog.show()
-        if self.cfDialog.exec_() == QDialog.Accepted:
+    def edit_fit(self, fname):
+        efDialog = QDialog()
+        editFitDialog = CustomFitDialog(efDialog, fname)
+        efDialog.show()
+        if efDialog.exec_() == QDialog.Accepted:
             customlist = get_func(typefunc='custom')
-            customlist[self.customFitDialog.fname] = (self.customFitDialog.f, self.customFitDialog.p)
-            fid = open(os.path.join(script_path, 'customFit.pkl'),'wb')
-            pickle.dump(customlist, fid)
-            fid.close()
-            newCustomFitAction = QAction(self.customFitDialog.fname, self.editFitMenu)
-            newCustomFitAction.triggered.connect(functools.partial(self.fit, self.customFitDialog.fname))
-            self.editFitMenu.insertAction(self.newFitAction, newCustomFitAction)
+            del customlist[fname]
+            self.showFitMenu.removeAction(self.showCustomFitActions[fname])
+            self.editFitMenu.removeAction(self.editFitActions[fname])
+            customlist[editFitDialog.fname] = (editFitDialog.f, editFitDialog.p)
+            pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+            self.add_fit_in_menu(editFitDialog.fname)
+        else:
+            pass
+    
+    def new_fit(self):
+        cfDialog = QDialog()
+        customFitDialog = CustomFitDialog(cfDialog)
+        cfDialog.show()
+        if cfDialog.exec_() == QDialog.Accepted:
+            customlist = get_func(typefunc='custom')
+            customlist[customFitDialog.fname] = (customFitDialog.f, customFitDialog.p)
+            pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+            self.add_fit_in_menu(customFitDialog.fname)
         else:
             pass
         
     def reset_fit(self):
-        # TODO:
-        pass        
-
+        for k in set(self.showCustomFitActions.keys()).difference(['a(x-b)^2']):
+            self.showFitMenu.removeAction(self.showCustomFitActions[k])
+        for k in set(self.editFitActions.keys()).difference(['a(x-b)^2']):
+            self.editFitMenu.removeAction(self.editFitActions[k])
+        customlist = {'a(x-b)^2':('lambda x, a, b : a*(x-b)**2', (1, 1))}
+        pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+        
         
 if __name__ == "__main__":
 #    import sys
