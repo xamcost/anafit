@@ -215,6 +215,7 @@ class Figure:
         lin = self._dictlin[self._currentLine]
         self._lastFit = Fit(lin.get_xydata(), strfunc)
         lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
+        print(self._lastFit)
         self.fig.canvas.draw()
         
     def other_fit(self):
@@ -236,7 +237,7 @@ class Figure:
         if self.cfDialog.exec_() == QDialog.Accepted:
             customlist = get_func(typefunc='custom')
             customlist[self.customFitDialog.fname] = (self.customFitDialog.f, self.customFitDialog.p)
-            fid = open(os.path.join(self.script_path, 'customFit.pkl'),'wb')
+            fid = open(os.path.join(script_path, 'customFit.pkl'),'wb')
             pickle.dump(customlist, fid)
             fid.close()
             newCustomFitAction = QAction(self.customFitDialog.fname, self.editFitMenu)
@@ -247,13 +248,7 @@ class Figure:
         
     def reset_fit(self):
         # TODO:
-        pass
-
-    def colorize(self):
-        colors = ["black", "blue", "red", "green"]
-        plt.gca().get_lines()[0].set_color(np.random.choice(colors))
-        self.fig.canvas.draw()
-        
+        pass        
 
         
 if __name__ == "__main__":
