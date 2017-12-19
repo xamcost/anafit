@@ -49,6 +49,12 @@ class CustomFitDialog(Ui_customFitDialog):
         Ui_customFitDialog.__init__(self)
         self.setupUi(dialog)
         self.customFitButtonBox.rejected.connect(self.cancelbutton)
+        self.customFitButtonBox.accepted.connect(self.ok)
+        
+    def ok(self):
+        self.fname = self.customFitName.text()
+        self.f = eval(self.customFitDef.text())
+        self.p = eval(self.customFitInit.text())
 
     def cancelbutton(self):
         exit()
@@ -57,10 +63,15 @@ class Fit(object):
     def __init__(self, xydata, fname, p=None):
         self._xydata = xydata
         self._fname = fname
-        if p is None:
-            self._f, self._p = get_func(self._fname)
-        else: 
-            self._f, _ = get_func(self._fname)
+        if ';'  not in fname:
+            if p is None:
+                self._f, self._p = get_func(self._fname)
+            else: 
+                self._f, _ = get_func(self._fname)
+        else:
+            fstr, pstr = fname.split(';')
+            self._f = eval(fstr)
+            self._p = eval(pstr)
         self.fit()
           
     @property
@@ -89,7 +100,8 @@ class Fit(object):
     
     @p.setter
     def p(self, p):
-        self.__init__(self._xydata, self._fname, p)
+        self._p = p
+        self.fit()
         
     @property
     def popt(self):
@@ -120,7 +132,7 @@ class Figure:
         self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
         self._lastFit = {}
         self.cfDialog = QDialog()
-        _ = CustomFitDialog(self.cfDialog)
+        self.customFitDialog = CustomFitDialog(self.cfDialog)
         
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
@@ -131,7 +143,7 @@ class Figure:
         self.button.setMenu(self.menu)
         toolbar.addWidget(self.button)
         
-        self.datasetMenu = QMenu('Datasets')
+        self.datasetMenu = QMenu('Dataset')
         self.menu.addMenu(self.datasetMenu)
         self.dataAction = {}
         for lin in self._dictlin.keys():
@@ -141,24 +153,37 @@ class Figure:
             self.dataAction[lin].setEnabled(True)
         self.dataAction[self._currentLine].setEnabled(False)
         
-        self.basicFitMenu = QMenu('Basic fit')
-        self.menu.addMenu(self.basicFitMenu)
+        self.showFitMenu = QMenu('Show Fit')
+        self.menu.addMenu(self.showFitMenu)
         
         self.linearFitMenu = QMenu('Linear')
-        self.basicFitMenu.addMenu(self.linearFitMenu)
+        self.showFitMenu.addMenu(self.linearFitMenu)
         for fname in get_func(typefunc='linear').keys():
             self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
         self.powerFitMenu = QMenu('Power')
-        self.basicFitMenu.addMenu(self.powerFitMenu)
+        self.showFitMenu.addMenu(self.powerFitMenu)
         for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        
-        self.customFitMenu = QMenu('Custom fit')
-        self.menu.addMenu(self.customFitMenu)
+        self.showFitMenu.addSeparator()
         for fname in get_func(typefunc='custom').keys():
-            self.customFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        self.customFitMenu.addSeparator()
-        self.customFitMenu.addAction('New Fit', self.new_customFit)
+            self.showFitMenu.addAction(fname, functools.partial(self.fit, fname))
+        self.showFitMenu.addSeparator()
+        self.otherFitAction = QAction('Other Fit...', self.showFitMenu)
+        self.otherFitAction.triggered.connect(self.other_fit)
+        self.showFitMenu.addAction(self.otherFitAction)
+        
+        self.editFitMenu = QMenu('Edit User Fit')
+        self.menu.addMenu(self.editFitMenu)
+        for fname in get_func(typefunc='custom').keys():
+            self.editFitMenu.addAction(fname, self.edit_fit)
+        self.editFitMenu.addSeparator()
+        self.newFitAction = QAction('New Fit', self.editFitMenu)
+        self.newFitAction.triggered.connect(self.new_customFit)
+        self.editFitMenu.addAction(self.newFitAction)
+        self.editFitMenu.addSeparator()
+        self.resetFitAction = QAction('Reset', self.editFitMenu)
+        self.resetFitAction.triggered.connect(self.reset_fit)
+        self.editFitMenu.addAction(self.resetFitAction)
         
     @property
     def fig(self):
@@ -191,13 +216,38 @@ class Figure:
         self._lastFit = Fit(lin.get_xydata(), strfunc)
         lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
         self.fig.canvas.draw()
+        
+    def other_fit(self):
+        fdef, ok = QInputDialog.getText(self.showFitMenu, 
+                                        'Enter your fitting function', 
+                                        'ex: lambda x, a, b : a*x+b ; (1, 0.1) :')
+        if ok:
+            self.fit(fdef)
+        else:
+            pass
+    
+    def edit_fit(self):
+        # TODO:
+        pass
     
     def new_customFit(self):
-        # TODO: create a QDialog that ask for the function
+        # TODO: test this function
         self.cfDialog.show()
-#        fid = open(os.path.join(self.script_path, 'customFit.pkl'),'wb')
-#        pickle.dump(self._customFit, fid)
-#        fid.close()
+        if self.cfDialog.exec_() == QDialog.Accepted:
+            customlist = get_func(typefunc='custom')
+            customlist[self.customFitDialog.fname] = (self.customFitDialog.f, self.customFitDialog.p)
+            fid = open(os.path.join(self.script_path, 'customFit.pkl'),'wb')
+            pickle.dump(customlist, fid)
+            fid.close()
+            newCustomFitAction = QAction(self.customFitDialog.fname, self.editFitMenu)
+            newCustomFitAction.triggered.connect(functools.partial(self.fit, self.customFitDialog.fname))
+            self.editFitMenu.insertAction(self.newFitAction, newCustomFitAction)
+        else:
+            pass
+        
+    def reset_fit(self):
+        # TODO:
+        pass
 
     def colorize(self):
         colors = ["black", "blue", "red", "green"]
