@@ -148,6 +148,7 @@ class Figure:
         self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
         self._lastFit = {}
         self._linFit = []
+        self._xrange = ()
         
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
@@ -158,8 +159,8 @@ class Figure:
         self.button.setMenu(self.menu)
         toolbar.addWidget(self.button)
         
-        self.menu.addAction('Undo Fit', self.undo_fit)
-        self.menu.addAction('Remove all fit', self.remove_all_fit)
+        self.menu.addAction('Undo Fit', self.undo_fit, QKeySequence.Undo)
+        self.menu.addAction('Remove all fit', self.remove_all_fit, QKeySequence('Shift+Ctrl+Z'))
         self.menu.addSeparator()
         
         self.datasetMenu = QMenu('Dataset')
@@ -171,6 +172,16 @@ class Figure:
             self.datasetMenu.addAction(self.dataAction[lin])
             self.dataAction[lin].setEnabled(True)
         self.dataAction[self._currentLine].setEnabled(False)
+        
+        self.defineRangeMenu = QMenu('Define Range')
+        self.menu.addMenu(self.defineRangeMenu)
+        self.rangeAction = QAction('Current: full', self.defineRangeMenu)
+        self.defineRangeMenu.addAction(self.rangeAction)
+        self.rangeAction.setEnabled(False)
+        self.defineRangeMenu.addSeparator()
+        self.defineRangeMenu.addAction('Define ...', self.define_range, QKeySequence('Shift+Ctrl+X'))
+        self.defineRangeMenu.addAction('Define ROI', self.define_roi, QKeySequence('Ctrl+X'))
+        self.defineRangeMenu.addAction('Reset', self.reset_range)
         
         self.showFitMenu = QMenu('Show Fit')
         self.menu.addMenu(self.showFitMenu)
@@ -195,7 +206,7 @@ class Figure:
             self.showCustomFitActionGroup.addAction(self.showCustomFitActions[fname])
         self.showFitMenu.addActions(self.showCustomFitActionGroup.actions())
         self.showFitSep = self.showFitMenu.addSeparator()
-        self.showFitMenu.addAction('Other Fit...', self.other_fit)
+        self.showFitMenu.addAction('Other Fit...', self.other_fit, QKeySequence('Ctrl+O'))
         
         self.editFitActionGroup = QActionGroup(self.showFitMenu)
         self.editFitActions = {}
@@ -205,7 +216,7 @@ class Figure:
             self.editFitActionGroup.addAction(self.editFitActions[fname])
         self.editFitMenu.addActions(self.editFitActionGroup.actions())
         self.editFitSep = self.editFitMenu.addSeparator()
-        self.editFitMenu.addAction('New Fit', self.new_fit)
+        self.editFitMenu.addAction('New Fit', self.new_fit, QKeySequence.New)
         self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('Reset', self.reset_fit)
         
@@ -245,6 +256,28 @@ class Figure:
             lin[0].remove()
         self._linFit = []
         self.fig.canvas.draw()
+        
+    def define_range(self):
+        xrange, ok = QInputDialog.getText(self.showFitMenu, 
+                                        'Enter the x-range where to fit', 
+                                        'ex: (10, 100) :')
+        if ok:
+            self._xrange = eval(xrange)
+            self.rangeAction.setText('Current : ({0}, {1})'.format(*self._xrange))
+        else:
+            pass
+        
+    def define_roi(self):
+        pts = plt.ginput(2, show_clicks=True)
+        if pts[0][0] < pts[0][1]:
+            self._xrange = (pts[0][0], pts[1][0])
+        else:
+            self._xrange = (pts[1][0], pts[0][0])
+        self.rangeAction.setText('Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
+        
+    def reset_range(self):
+        self._xrange = ()
+        self.rangeAction.setText('Current : full')
     
     def add_fit_in_menu(self, fname):
         self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
@@ -257,7 +290,11 @@ class Figure:
         
     def fit(self, strfunc):
         lin = self._dictlin[self._currentLine]
-        self._lastFit = Fit(lin.get_xydata(), strfunc)
+        if self._xrange is ():
+            xydata = lin.get_xydata()
+        else:
+            xydata = np.array([xy for xy in lin.get_xydata() if xy[0] > self._xrange[0] and xy[0] < self._xrange[1]])
+        self._lastFit = Fit(xydata, strfunc)
         linfit = lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
         self._linFit.append(linfit)
         print(self._lastFit)
