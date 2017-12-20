@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import functools
+import sys
 import dill as pickle # mandatory to import pickle like this to pickle lambdas
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
@@ -70,7 +71,7 @@ class CustomFitDialog(Ui_customFitDialog):
         self.p = eval(self.customFitInit.text())
 
     def cancelbutton(self):
-        exit()
+        self.close()
         
 class Fit(object):
     def __init__(self, xydata, fname, p=None):
@@ -141,7 +142,7 @@ class Fit(object):
 class Figure:
     def __init__(self, fig=None):
         if fig is None:
-            self._fig = plt.gcf()
+            fig = plt.gcf()
         self._fig = fig
         self._ax = fig.get_axes()
         self._dictlin = {(lin.get_color() + lin.get_marker()):lin for axe in self._ax for lin in axe.get_lines()}
