@@ -11,7 +11,7 @@ import numpy as np
 import os
 import functools
 import sys
-import dill as pickle # mandatory to import pickle like this to pickle lambdas
+import json
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -21,23 +21,23 @@ from customFitDialog import Ui_customFitDialog
 # global variable
 script_path = os.path.dirname(os.path.abspath(__file__))
 
-
-def pkl_save(var, path):
-    fid = open(path,'wb')
-    pickle.dump(var, fid)
-    fid.close()
+def save_customlist(customlist):
+    with open(os.path.join(script_path, 'customFit.txt'), 'w') as fid:
+        json.dump(customlist, fid, indent=2, sort_keys=True)
 
 def get_func(strfunc=None, typefunc=None):
-        linlist = {'ax':('lambda x, a : a*x', (1)), 
-                    'ax+b':('lambda x, a, b : a*x+b', (1, 1)), 
-                    'a(x-b)':('lambda x, a, b : a*(x-b)', (1, 1))}
-        powerlist = {'ax^n':('lambda x, a, n : a*(x**n)', (1, 1)), 
-                    'a+bx^n':('lambda x, a, c, n : a+b*(x**n)', (1, 1, 1)), 
-                    'a(x-b)^n':('lambda x, a, b, n : a*((x-b)**n)', (1, 1, 1)), 
-                    'a+b(x-c)^n':('lambda x, a, b, c, n : a+b*((x-c)**n)', (1, 1, 1, 1))}
-        fid = open(os.path.join(script_path, 'customFit.pkl'), 'rb')
-        customlist = pickle.load(fid)
-        fid.close()
+        linlist = {'ax':'lambda x, a : a*x ; (1)', 
+                    'ax+b':'lambda x, a, b : a*x+b ; (1, 1)', 
+                    'a(x-b)':'lambda x, a, b : a*(x-b) ; (1, 1)'}
+        powerlist = {'ax^n':'lambda x, a, n : a*(x**n) ; (1, 1)', 
+                    'a+bx^n':'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)', 
+                    'a(x-b)^n':'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)', 
+                    'a+b(x-c)^n':'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
+        if os.path.exists(os.path.join(script_path, 'customFit.txt')):
+            with open(os.path.join(script_path, 'customFit.txt'), 'r') as fid:
+                customlist = json.load(fid)
+        else:
+            customlist = {}
         funclist = {**linlist, **powerlist, **customlist}
         if strfunc is None:
             if typefunc is None:
@@ -51,27 +51,28 @@ def get_func(strfunc=None, typefunc=None):
         else:
             return funclist[strfunc]
 
+def from_fdef(fdef):
+    fstr, pstr = fdef.split(';')
+    return eval(fstr), eval(pstr)
 
 class CustomFitDialog(Ui_customFitDialog):
     def __init__(self, dialog, fname=None):
-        Ui_customFitDialog.__init__(self)
+        super().__init__()
         self.setupUi(dialog)
-        self.customFitButtonBox.rejected.connect(self.cancelbutton)
+#        self.customFitButtonBox.rejected.connect(self.cancelbutton)
         self.customFitButtonBox.accepted.connect(self.ok)
         if fname is not None:
             dialog.setWindowTitle('Edit Fit')
-            f, p = get_func(strfunc=fname)
+            fdef = get_func(strfunc=fname)
             self.customFitName.setText(fname)
-            self.customFitDef.setText(f)
-            self.customFitInit.setText(str(p))
+            self.customFitDef.setText(fdef)
         
     def ok(self):
         self.fname = self.customFitName.text()
-        self.f = self.customFitDef.text()
-        self.p = eval(self.customFitInit.text())
+        self.fdef = self.customFitDef.text()
 
-    def cancelbutton(self):
-        self.close()
+#    def cancelbutton(self):
+#        self.close()
         
 class Fit(object):
     def __init__(self, xydata, fname, p=None):
@@ -79,16 +80,14 @@ class Fit(object):
         self._fname = fname
         if ';'  not in fname:
             if p is None:
-                fstr, self._p = get_func(self._fname)
-                self._f = eval(fstr)
+                fdef = get_func(self._fname)
+                self._f, self._p = from_fdef(fdef)
             else: 
-                fstr, _ = get_func(self._fname)
-                self._f = eval(fstr)
+                fdef = get_func(self._fname)
+                self._f, _ = from_fdef(fdef)
                 self._p = p
         else:
-            fstr, pstr = fname.split(';')
-            self._f = eval(fstr)
-            self._p = eval(pstr)
+            self._f, self._p = from_fdef(fname)
         self.fit()
           
     @property
@@ -319,8 +318,8 @@ class Figure:
             del customlist[fname]
             self.showFitMenu.removeAction(self.showCustomFitActions[fname])
             self.editFitMenu.removeAction(self.editFitActions[fname])
-            customlist[editFitDialog.fname] = (editFitDialog.f, editFitDialog.p)
-            pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+            customlist[editFitDialog.fname] = editFitDialog.fdef
+            save_customlist(customlist)
             self.add_fit_in_menu(editFitDialog.fname)
         else:
             pass
@@ -331,8 +330,8 @@ class Figure:
         cfDialog.show()
         if cfDialog.exec_() == QDialog.Accepted:
             customlist = get_func(typefunc='custom')
-            customlist[customFitDialog.fname] = (customFitDialog.f, customFitDialog.p)
-            pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+            customlist[customFitDialog.fname] = customFitDialog.fdef
+            save_customlist(customlist)
             self.add_fit_in_menu(customFitDialog.fname)
         else:
             pass
@@ -342,8 +341,9 @@ class Figure:
             self.showFitMenu.removeAction(self.showCustomFitActions[k])
         for k in set(self.editFitActions.keys()).difference(['a(x-b)^2']):
             self.editFitMenu.removeAction(self.editFitActions[k])
-        customlist = {'a(x-b)^2':('lambda x, a, b : a*(x-b)**2', (1, 1))}
-        pkl_save(customlist, os.path.join(script_path, 'customFit.pkl'))
+        self.add_fit_in_menu('a(x-b)^2')
+        customlist = {'a(x-b)^2':'lambda x, a, b : a*(x-b)**2 ; (1, 1)'}
+        save_customlist(customlist)
         
         
 if __name__ == "__main__":
