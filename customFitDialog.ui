@@ -61,22 +61,12 @@
     <item>
      <widget class="QLabel" name="customFitDefLabel">
       <property name="text">
-       <string>Equation : ( ex: lambda x, a, b : a*(x-b)**(1/2) )</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Definition : &lt;span style=&quot; font-style:italic;&quot;&gt;ex: lambda x, a, b : a*(x-b)**(1/2) ; (1, 0.1)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
     </item>
     <item>
      <widget class="QLineEdit" name="customFitDef"/>
-    </item>
-    <item>
-     <widget class="QLabel" name="customFitInitLabel">
-      <property name="text">
-       <string>Parameter initialisation : ( ex: ( 1, 0.1) )</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="customFitInit"/>
     </item>
    </layout>
   </widget>

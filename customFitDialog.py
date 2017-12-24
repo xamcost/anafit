@@ -38,12 +38,6 @@ class Ui_customFitDialog(object):
         self.customFitDef = QtWidgets.QLineEdit(self.verticalLayoutWidget)
         self.customFitDef.setObjectName("customFitDef")
         self.verticalLayout.addWidget(self.customFitDef)
-        self.customFitInitLabel = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.customFitInitLabel.setObjectName("customFitInitLabel")
-        self.verticalLayout.addWidget(self.customFitInitLabel)
-        self.customFitInit = QtWidgets.QLineEdit(self.verticalLayoutWidget)
-        self.customFitInit.setObjectName("customFitInit")
-        self.verticalLayout.addWidget(self.customFitInit)
 
         self.retranslateUi(customFitDialog)
         self.customFitButtonBox.accepted.connect(customFitDialog.accept)
@@ -54,6 +48,5 @@ class Ui_customFitDialog(object):
         _translate = QtCore.QCoreApplication.translate
         customFitDialog.setWindowTitle(_translate("customFitDialog", "New Fit Definition"))
         self.customFitNameLabel.setText(_translate("customFitDialog", "Function name :"))
-        self.customFitDefLabel.setText(_translate("customFitDialog", "Equation : ( ex: lambda x, a, b : a*(x-b)**(1/2) )"))
-        self.customFitInitLabel.setText(_translate("customFitDialog", "Parameter initialisation : ( ex: ( 1, 0.1) )"))
+        self.customFitDefLabel.setText(_translate("customFitDialog", "<html><head/><body><p>Definition : <span style=\" font-style:italic;\">ex: lambda x, a, b : a*(x-b)**(1/2) ; (1, 0.1)</span></p></body></html>"))
 
