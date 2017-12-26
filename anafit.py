@@ -132,11 +132,72 @@ class Fit(object):
                                            p0=self._p)
         
     def __repr__(self):
-        xrange = 'Xrange : [{0}, {1}]'.format(np.min(self._xydata[:,0]), np.max(self._xydata[:,0]))
+        xrange = 'Xrange : [{0:.1f}, {0:.1f}]'.format(np.min(self._xydata[:,0]), np.max(self._xydata[:,0]))
         fit = 'Fitting function : ' + self._fname
         init = 'Initialising parameters : {0}'.format(self._p)
         coef = 'Coeff. : {0}'.format(self._popt)
-        return xrange + '\n' + fit +'\n' + init +'\n' + coef    
+        return xrange + '\n' + fit +'\n' + init +'\n' + coef
+    
+class DrawLine(object):
+    def __init__(self, fig, show_slope=None):
+        self.fig = fig
+        self.ax = fig.gca()
+        self.slope = show_slope
+        self.pt1 = np.array(plt.ginput(1)[0])
+        self.pt2 = None
+        self.lx, = self.ax.plot(*self.pt1, 'k--')
+        self.cmove = self.fig.canvas.mpl_connect('motion_notify_event', self.mouse_move)
+        self.cclicked = self.fig.canvas.mpl_connect('button_press_event', self.mouse_clicked)
+        
+
+    def mouse_move(self, event):
+        if not event.inaxes:
+            return
+        x = event.xdata
+        if self.slope is None:
+            y = event.ydata
+        else:
+            if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+                y = np.exp(np.log(self.pt1[1]) - self.slope*np.log(self.pt1[0]))*x**self.slope
+            else:
+                y = self.slope *(x - self.pt1[0]) + self.pt1[1]
+        self.lx.set_ydata([self.pt1[1], y])
+        self.lx.set_xdata([self.pt1[0], x])
+        self.fig.canvas.draw()
+        
+    def mouse_clicked(self, event):
+        if not event.inaxes:
+            return
+        if self.slope is None:
+            self.pt2 = [event.xdata, event.ydata]
+        else:
+            self.pt2 = [event.xdata, 
+                        np.exp(np.log(self.pt1[1]) - self.slope*np.log(self.pt1[0]))*event.xdata**self.slope]
+        self.get_slope()
+        self.lx.set_xdata([self.pt1[0], self.pt2[0]])
+        self.lx.set_ydata([self.pt1[1], self.pt2[1]])
+        self.fig.canvas.draw()
+        self.fig.canvas.mpl_disconnect(self.cmove)
+        self.fig.canvas.mpl_disconnect(self.cclicked)
+        
+    def get_slope(self):
+        if self.slope is None:
+            if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+                self.slope = (np.log(self.pt2[1]) - np.log(self.pt1[1]))/(np.log(self.pt2[0]) - np.log(self.pt1[0]))
+            else:
+                self.slope = (self.pt2[1] - self.pt1[1])/(self.pt2[0] - self.pt1[0])
+        if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+            self.b = np.exp(np.log(self.pt2[1]) - self.slope*np.log(self.pt2[0]))
+        else:
+            self.b = self.pt2[1] - self.slope*self.pt2[0]
+        return self.slope, self.b
+    
+    def __repr__(self):
+        if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+            lstr = 'Line a*x^n : a = {0:.1f} , n = {1:.1f} \n'.format(self.b, self.slope)
+        else:
+            lstr = 'Line a*x+b : a = {0:.1f} , b = {1:.1f} \n'.format(self.slope, self.b)
+        return lstr
 
 class Figure:
     def __init__(self, fig=None):
@@ -149,6 +210,7 @@ class Figure:
         self._lastFit = {}
         self._linFit = []
         self._xrange = ()
+        self._lines = []
         
         toolbar = self._fig.canvas.toolbar
         self.button = QToolButton()
@@ -220,6 +282,12 @@ class Figure:
         self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('Reset', self.reset_fit)
         
+        self.menu.addSeparator()
+        self.menu.addAction('Draw Line', self.draw_line, QKeySequence('Ctrl+L'))
+        self.menu.addAction('Undo Line', self.undo_line, QKeySequence('Shift+Ctrl+L'))
+        self.menu.addAction('Get Slope', self.get_slope, QKeySequence('Ctrl+G'))
+        self.menu.addAction('Show Slope', self.show_slope, QKeySequence('Shift+Ctrl+G'))
+        
     @property
     def fig(self):
         return self._fig
@@ -263,7 +331,7 @@ class Figure:
                                         'ex: (10, 100) :')
         if ok:
             self._xrange = eval(xrange)
-            self.rangeAction.setText('Current : ({0}, {1})'.format(*self._xrange))
+            self.rangeAction.setText('Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
         else:
             pass
         
@@ -344,6 +412,35 @@ class Figure:
         self.add_fit_in_menu('a(x-b)^2')
         customlist = {'a(x-b)^2':'lambda x, a, b : a*(x-b)**2 ; (1, 1)'}
         save_customlist(customlist)
+        
+    def draw_line(self):
+        self._lines.append(DrawLine(self._fig))
+    
+    def undo_line(self):
+        self._lines[-1].lx.remove()
+        del self._lines[-1]
+        self.fig.canvas.draw()
+        
+    def remove_all_lines(self):
+        for lin in self._lines:
+            lin.lx.remove()
+        self._lines = []
+        self.fig.canvas.draw()
+    
+    def get_slope(self):
+        if len(self._lines) > 0:
+            print(self._lines[-1])
+        else:
+            pass
+    
+    def show_slope(self):
+        slope, ok = QInputDialog.getText(self.menu, 
+                                        'Enter the slope to show', 
+                                        'ex: -1')
+        if ok:
+            self._lines.append(DrawLine(self._fig, show_slope=eval(slope)))
+        else:
+            pass
         
         
 if __name__ == "__main__":
