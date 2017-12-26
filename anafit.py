@@ -8,10 +8,7 @@ Created on Wed Dec 13 22:38:27 2017
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import functools
-import sys
-import json
+import os, sys, json, functools
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -22,41 +19,105 @@ from customFitDialog import Ui_customFitDialog
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 def save_customlist(customlist):
+    """
+    Save custom fitting function dictionary in a txt file customFit.txt
+
+    Parameters
+    ----------
+
+    customlist : dict
+        dict of custom fitting functions. 
+        Ex : {'funcName':'lambda x, a, b : a*x+b ; (1, 0.1)'}
+
+    """
     with open(os.path.join(script_path, 'customFit.txt'), 'w') as fid:
         json.dump(customlist, fid, indent=2, sort_keys=True)
 
 def get_func(strfunc=None, typefunc=None):
-        linlist = {'ax':'lambda x, a : a*x ; (1)', 
-                    'ax+b':'lambda x, a, b : a*x+b ; (1, 1)', 
-                    'a(x-b)':'lambda x, a, b : a*(x-b) ; (1, 1)'}
-        powerlist = {'ax^n':'lambda x, a, n : a*(x**n) ; (1, 1)', 
-                    'a+bx^n':'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)', 
-                    'a(x-b)^n':'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)', 
-                    'a+b(x-c)^n':'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
-        if os.path.exists(os.path.join(script_path, 'customFit.txt')):
-            with open(os.path.join(script_path, 'customFit.txt'), 'r') as fid:
-                customlist = json.load(fid)
-        else:
-            customlist = {}
-        funclist = {**linlist, **powerlist, **customlist}
-        if strfunc is None:
-            if typefunc is None:
-                return funclist
-            elif typefunc == 'linear':
-                return linlist
-            elif typefunc == 'power':
-                return powerlist
-            elif typefunc == 'custom':
-                return customlist
-        else:
-            return funclist[strfunc]
+    """
+    Returns a string or a dict of custom fitting functions
+
+    Parameters
+    ----------
+
+    strfunc : str, optional
+        Must correspond to the name (in dict.keys) of a function : if given, 
+        returns the corresponding string function.
+        Default: None
+    typefunc : str, optional
+        Possible values: linear, power or custom. If provided, returns the 
+        dictionary of the corresponding type of functions.
+        Default: None
+    
+    Returns
+    ----------
+    str or dict
+
+    """
+    linlist = {'ax':'lambda x, a : a*x ; (1)', 
+                'ax+b':'lambda x, a, b : a*x+b ; (1, 1)', 
+                'a(x-b)':'lambda x, a, b : a*(x-b) ; (1, 1)'}
+    powerlist = {'ax^n':'lambda x, a, n : a*(x**n) ; (1, 1)', 
+                'a+bx^n':'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)', 
+                'a(x-b)^n':'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)', 
+                'a+b(x-c)^n':'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
+    if os.path.exists(os.path.join(script_path, 'customFit.txt')):
+        with open(os.path.join(script_path, 'customFit.txt'), 'r') as fid:
+            customlist = json.load(fid)
+    else:
+        customlist = {}
+    funclist = {**linlist, **powerlist, **customlist}
+    if strfunc is None:
+        if typefunc is None:
+            return funclist
+        elif typefunc == 'linear':
+            return linlist
+        elif typefunc == 'power':
+            return powerlist
+        elif typefunc == 'custom':
+            return customlist
+    else:
+        return funclist[strfunc]
 
 def from_fdef(fdef):
+    """
+    Returns a function and its initialising parameters' values from a string 
+    containing them, typically 'fdef ; (param)'
+
+    Parameters
+    ----------
+
+    fdef : str, optional
+        String of type 'fdef ; (param)'
+    
+    Returns
+    ----------
+    f: function
+    p: tuple 
+        initialising parameters' values
+
+    """
     fstr, pstr = fdef.split(';')
     return eval(fstr), eval(pstr)
 
 class CustomFitDialog(Ui_customFitDialog):
     def __init__(self, dialog, fname=None):
+        """
+        Class constructing a dialog to ask the user for a function name and its
+        corresponding definition
+    
+        Parameters
+        ----------
+    
+        dialog : QDialog
+            base dialog
+        fname : str, optional
+            function name (a key from fitting functions dict). If 
+            provided, the dialog will be used to edit an existing function from 
+            the custom fitting function database
+            Default: None
+    
+        """
         super().__init__()
         self.setupUi(dialog)
 #        self.customFitButtonBox.rejected.connect(self.cancelbutton)
@@ -68,6 +129,10 @@ class CustomFitDialog(Ui_customFitDialog):
             self.customFitDef.setText(fdef)
         
     def ok(self):
+        """
+        Reads the line edit asked to the user, if ok button has been pressed
+    
+        """
         self.fname = self.customFitName.text()
         self.fdef = self.customFitDef.text()
 
@@ -76,6 +141,25 @@ class CustomFitDialog(Ui_customFitDialog):
         
 class Fit(object):
     def __init__(self, xydata, fname, p=None):
+        """
+        Class containing all informations corresponding to a fitted set of data:
+        the xy sets of data, the fitting function, its parameters and their 
+        initialising values as well as the covariant matrix from the fit. Uses 
+        scipy.optimize.curve_fit
+    
+        Parameters
+        ----------
+    
+        xydata: numpy.ndarray
+            2 columns array containing x and y data to be fitted
+        fname: str
+            fitting function name (a key from fitting functions dict)
+        p: tuple, optional
+            if provided, the initialising parameters contained in the string 
+            definition of the fitting function are ignored and set to p
+            Default: None
+    
+        """
         self._xydata = xydata
         self._fname = fname
         if ';'  not in fname:
@@ -140,6 +224,21 @@ class Fit(object):
     
 class DrawLine(object):
     def __init__(self, fig, show_slope=None):
+        """
+        Class allowing to draw dynamically a line on a matplotlib plot
+    
+        Parameters
+        ----------
+    
+        fig: matplotlib.pyplot.figure object
+            the figure window to draw the line in
+        show_slope: float, optional
+            If provided, the line to be drawn will have a slope given by 
+            show_slope. If the scale is log-log, this corresponds to the 
+            exponent of a power law
+            Default: None
+    
+        """
         self.fig = fig
         self.ax = fig.gca()
         self.slope = show_slope
@@ -151,6 +250,16 @@ class DrawLine(object):
         
 
     def mouse_move(self, event):
+        """
+        Draws a line following the mouse cursor or a given slope when the mouse
+        is moved in the figure window
+    
+        Parameters
+        ----------
+    
+        event: matplotlib mouse motion_notify_event
+    
+        """
         if not event.inaxes:
             return
         x = event.xdata
@@ -166,6 +275,15 @@ class DrawLine(object):
         self.fig.canvas.draw()
         
     def mouse_clicked(self, event):
+        """
+        Terminates the line drawing to a clicked point in the figure window
+    
+        Parameters
+        ----------
+    
+        event: matplotlib mouse button_press_event
+    
+        """
         if not event.inaxes:
             return
         if self.slope is None:
@@ -181,6 +299,19 @@ class DrawLine(object):
         self.fig.canvas.mpl_disconnect(self.cclicked)
         
     def get_slope(self):
+        """
+        Returns parameters corresponding to a drawn line on the figure window.
+        If scale is lin-lin, returns a and b from y = ax+b line definition.
+        If scale is log-log, returns n and a from y = ax^n line definition.
+        
+        Returns
+        ----------
+        slope: float
+            slope or power law exponent
+        b: float
+            origin value or power law prefactor
+    
+        """
         if self.slope is None:
             if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
                 self.slope = (np.log(self.pt2[1]) - np.log(self.pt1[1]))/(np.log(self.pt2[0]) - np.log(self.pt1[0]))
@@ -201,6 +332,19 @@ class DrawLine(object):
 
 class Figure:
     def __init__(self, fig=None):
+        """
+        Class constructing the anafit menu and includes it in the toolbar of a
+        matplotlib.pyplot.figure
+    
+        Parameters
+        ----------
+    
+        fig: matplotlib.pyplot.figure object
+            the figure window where to include anafit. If not provided, the 
+            current figure is used (plt.gcf())
+            Default: None
+    
+        """
         if fig is None:
             fig = plt.gcf()
         self._fig = fig
@@ -308,6 +452,17 @@ class Figure:
         self._currentLine = lin
         
     def set_currentLine(self, lin):
+        """
+        Another setter for the current dataset. Used as a slot for the dataset
+        selection menu's actions
+    
+        Parameters
+        ----------
+    
+        lin: matplotlib.pyplot.line object
+            the dataset line object
+    
+        """
         self.currentLine = lin
         
     @property
@@ -315,17 +470,30 @@ class Figure:
         return self._lastFit
     
     def undo_fit(self):
+        """
+        Slot to undo the last fit
+    
+        """
         self._linFit[-1][0].remove()
         del self._linFit[-1]
         self.fig.canvas.draw()
         
     def remove_all_fit(self):
+        """
+        Slot to remove all fit
+    
+        """
         for lin in self._linFit:
             lin[0].remove()
         self._linFit = []
         self.fig.canvas.draw()
         
     def define_range(self):
+        """
+        Slot to display a dialog asking the user for a tuple corresponding to 
+        the xrange to consider for fitting
+    
+        """
         xrange, ok = QInputDialog.getText(self.showFitMenu, 
                                         'Enter the x-range where to fit', 
                                         'ex: (10, 100) :')
@@ -336,6 +504,10 @@ class Figure:
             pass
         
     def define_roi(self):
+        """
+        Slot to define the x-fitting range graphically, by selecting two points
+    
+        """
         pts = plt.ginput(2, show_clicks=True)
         if pts[0][0] < pts[0][1]:
             self._xrange = (pts[0][0], pts[1][0])
@@ -344,10 +516,25 @@ class Figure:
         self.rangeAction.setText('Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
         
     def reset_range(self):
+        """
+        Slot to reset the xr-fitting range, therefore using the full range
+    
+        """
         self._xrange = ()
         self.rangeAction.setText('Current : full')
     
     def add_fit_in_menu(self, fname):
+        """
+        Creates new actions in Show Fit menu and Edit User Fit menu when a new
+        custom fitting function of name fname is defined
+        
+        Parameters
+        ----------
+    
+        fname: str
+            function name (a key from fitting functions dict)
+    
+        """
         self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
         self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
         self.showFitMenu.insertAction(self.showFitSep, self.showCustomFitActions[fname])
@@ -357,6 +544,17 @@ class Figure:
         self.editFitMenu.insertAction(self.editFitSep, self.editFitActions[fname])
         
     def fit(self, strfunc):
+        """
+        Fit the selected dataset by the function of name strfunc. Uses 
+        scipy.optimize.curve_fit. Print fitting infos in command line.
+        
+        Parameters
+        ----------
+    
+        strfunc: str
+            function name (a key from fitting functions dict)
+    
+        """
         lin = self._dictlin[self._currentLine]
         if self._xrange is ():
             xydata = lin.get_xydata()
@@ -369,6 +567,11 @@ class Figure:
         self.fig.canvas.draw()
         
     def other_fit(self):
+        """
+        Slot to fit the current selected dataset by a function asked to the 
+        user through a dialog
+    
+        """
         fdef, ok = QInputDialog.getText(self.showFitMenu, 
                                         'Enter your fitting function', 
                                         'ex: lambda x, a, b : a*x+b ; (1, 0.1) :')
@@ -378,6 +581,16 @@ class Figure:
             pass
     
     def edit_fit(self, fname):
+        """
+        Slot to edit an already defined custom fitting function
+        
+        Parameters
+        ----------
+    
+        fname: str
+            function name (a key from fitting functions dict)
+    
+        """
         efDialog = QDialog()
         editFitDialog = CustomFitDialog(efDialog, fname)
         efDialog.show()
@@ -393,6 +606,11 @@ class Figure:
             pass
     
     def new_fit(self):
+        """
+        Slot to define a new custom fitting function that will be saved in 
+        customFit.txt
+    
+        """
         cfDialog = QDialog()
         customFitDialog = CustomFitDialog(cfDialog)
         cfDialog.show()
@@ -405,6 +623,11 @@ class Figure:
             pass
         
     def reset_fit(self):
+        """
+        Slot to delete all custom fitting functions and refresh the Show Fit 
+        menu and Edit User Fit menu
+    
+        """
         for k in set(self.showCustomFitActions.keys()).difference(['a(x-b)^2']):
             self.showFitMenu.removeAction(self.showCustomFitActions[k])
         for k in set(self.editFitActions.keys()).difference(['a(x-b)^2']):
@@ -414,26 +637,50 @@ class Figure:
         save_customlist(customlist)
         
     def draw_line(self):
+        """
+        Slot to dynamically draw a line on the figure window
+    
+        """
         self._lines.append(DrawLine(self._fig))
     
     def undo_line(self):
+        """
+        Slot to remove the last drawn line
+    
+        """
         self._lines[-1].lx.remove()
         del self._lines[-1]
         self.fig.canvas.draw()
         
     def remove_all_lines(self):
+        """
+        Slot to remove all drawn lines. 
+        CURRENTLY NOT USED
+    
+        """
         for lin in self._lines:
             lin.lx.remove()
         self._lines = []
         self.fig.canvas.draw()
     
     def get_slope(self):
+        """
+        Slot to get the slope of the last drawn line.
+        If scale is lin-lin, print a and b from y = ax+b line definition.
+        If scale is log-log, print n and a from y = ax^n line definition.
+    
+        """
         if len(self._lines) > 0:
             print(self._lines[-1])
         else:
             pass
     
     def show_slope(self):
+        """
+        Slot to draw a line corresponding to a given slope if scale is lin-lin,
+        or to a given exponent if scale is log-log.
+    
+        """
         slope, ok = QInputDialog.getText(self.menu, 
                                         'Enter the slope to show', 
                                         'ex: -1')
