@@ -1,0 +1,4 @@
+include README.rst
+include anafit/ana_icon*
+include anafit/customFitDialog.ui
+include anafit/customFit.txt
