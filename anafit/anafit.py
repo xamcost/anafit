@@ -378,6 +378,8 @@ class Figure:
             self.datasetMenu.addAction(self.dataAction[lin])
             self.dataAction[lin].setEnabled(True)
         self.dataAction[self._currentLine].setEnabled(False)
+        self.datasetSep = self.datasetMenu.addSeparator()
+        self.datasetMenu.addAction('Refresh', self.refresh_dataset)
         
         self.defineRangeMenu = QMenu('Define Range')
         self.menu.addMenu(self.defineRangeMenu)
@@ -487,6 +489,25 @@ class Figure:
             lin[0].remove()
         self._linFit = []
         self.fig.canvas.draw()
+        
+    def refresh_dataset(self):
+        """
+        Slot to refresh dataset menu, for instance if a new plot has been added
+        after anafit.Figure() called
+        
+        """
+        newlin = {(lin.get_color() + lin.get_marker()):lin for axe in self._ax for lin in axe.get_lines()}
+        for lin in set(newlin.keys()).difference(self._dictlin.keys()):
+            self.dataAction[lin] = QAction(lin, self.datasetMenu)
+            self.dataAction[lin].triggered.connect(functools.partial(self.set_currentLine, lin))
+            self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
+            self.dataAction[lin].setEnabled(True)
+        for lin in set(self._dictlin.keys()).difference(newlin.keys()):
+            self.datasetMenu.removeAction(self.dataAction[lin])
+            del self.dataAction[lin]
+        self._dictlin = newlin
+        self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
+        self.dataAction[self._currentLine].setEnabled(False)
         
     def define_range(self):
         """
@@ -695,7 +716,7 @@ if __name__ == "__main__":
 #    app = QApplication(sys.argv)
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(np.arange(0,100,1), np.arange(50,250,2) + 10*(np.random.rand(100) - 1/2), 'b+')
+    lin, = ax.plot(np.arange(0,100,1), np.arange(50,250,2) + 10*(np.random.rand(100) - 1/2), 'b+')
     ax.plot(np.arange(0,100,1), np.arange(0,300,3) + 30*(np.random.rand(100) - 1/2), 'rx')
     ax.plot(np.arange(0,100,1), np.square(np.arange(0,10,0.1)) + 5*(np.random.rand(100) - 1/2), 'k.')
     test = Figure(fig)
