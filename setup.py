@@ -20,8 +20,7 @@ setup(name='anafit',
       author_email='maxime.costalonga@gmail.com',
       packages=['anafit'],
       install_requires=[
-          'matplotlib', 'numpy', 'scipy', 'PyQt5', 'os', 'sys', 'json', 
-          'functools'
+          'matplotlib', 'numpy', 'scipy'#, 'PyQt5'
       ],
       include_package_data=True,
       zip_safe=False)
