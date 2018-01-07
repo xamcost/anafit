@@ -4,10 +4,10 @@ Anafit
 Anafit is a package providing fitting tools for matplotlib figures. It is largely inspired from the Ezyfit toolbox for Matlab.
 
 Source code repository and issue tracker:
-   git@gitlab.com:xamcosta/Anafit.git
+   https://gitlab.com/xamcosta/Anafit
 
 Python Package Index:
-   to be filled
+   https://pypi.python.org/pypi/anafit/0.1
 
 Requirements
 ------------

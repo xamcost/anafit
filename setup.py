@@ -15,16 +15,13 @@ setup(name='anafit',
         'Topic :: Scientific/Engineering'
       ],
       keywords='matplotlib fit',
-#      url='http://github.com/storborg/funniest',
+      url='https://gitlab.com/xamcosta/Anafit',
       author='Maxime Costalonga',
-#      author_email='',
-#      license='',
+      author_email='maxime.costalonga@gmail.com',
       packages=['anafit'],
       install_requires=[
           'matplotlib', 'numpy', 'scipy', 'PyQt5', 'os', 'sys', 'json', 
           'functools'
       ],
-#      test_suite='nose.collector',
-#      tests_require=['nose', 'nose-cover3'],
       include_package_data=True,
       zip_safe=False)
