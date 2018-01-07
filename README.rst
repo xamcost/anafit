@@ -7,7 +7,7 @@ Source code repository and issue tracker:
    https://gitlab.com/xamcosta/Anafit
 
 Python Package Index:
-   https://pypi.python.org/pypi/anafit/0.1
+   https://pypi.python.org/pypi/anafit/0.1.3
 
 Requirements
 ------------
