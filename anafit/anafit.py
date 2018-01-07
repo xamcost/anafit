@@ -12,7 +12,7 @@ import os, sys, json, functools
 from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from customFitDialog import Ui_customFitDialog
+from .customFitDialog import Ui_customFitDialog
 
 
 # global variable
