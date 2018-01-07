@@ -351,7 +351,8 @@ class Figure:
         self._ax = fig.get_axes()
         self._dictlin = {(lin.get_color() + lin.get_marker()):lin for axe in self._ax for lin in axe.get_lines()}
         self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
-        self._lastFit = {}
+        self._fits = {}
+        self._lastFit = []
         self._linFit = []
         self._xrange = ()
         self._lines = []
@@ -471,9 +472,14 @@ class Figure:
     def lastFit(self):
         return self._lastFit
     
+    @property
+    def fits(self):
+        return self._fits
+    
     def undo_fit(self):
         """
-        Slot to undo the last fit
+        Slot to undo the last fit. 
+        Note that it does not affect the fit history !
     
         """
         self._linFit[-1][0].remove()
@@ -482,12 +488,14 @@ class Figure:
         
     def remove_all_fit(self):
         """
-        Slot to remove all fit
+        Slot to remove all fit. Also deletes the fit history !
     
         """
         for lin in self._linFit:
             lin[0].remove()
         self._linFit = []
+        self._fits = {}
+        self._lastFit = []
         self.fig.canvas.draw()
         
     def refresh_dataset(self):
@@ -581,7 +589,12 @@ class Figure:
             xydata = lin.get_xydata()
         else:
             xydata = np.array([xy for xy in lin.get_xydata() if xy[0] > self._xrange[0] and xy[0] < self._xrange[1]])
-        self._lastFit = Fit(xydata, strfunc)
+        fitted = Fit(xydata, strfunc)
+        if self._currentLine in self._fits.keys():
+            self._fits[self._currentLine].append(fitted)
+        else:
+            self._fits[self._currentLine] = [fitted]
+        self._lastFit = fitted
         linfit = lin.get_axes().plot(self._lastFit.xydata[:, 0], list(map(lambda x : self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
         self._linFit.append(linfit)
         print(self._lastFit)
