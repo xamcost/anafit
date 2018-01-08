@@ -65,8 +65,9 @@ def get_func(strfunc=None, typefunc=None):
                  'a+bx^n': 'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)',
                  'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
                  'a+b(x-c)^n': 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
-    if os.path.exists(os.path.join(script_path, 'customFit.txt')):
-        with open(os.path.join(script_path, 'customFit.txt'), 'r') as fid:
+    custom_path = os.path.join(script_path, 'customFit.txt')
+    if os.path.exists(custom_path):
+        with open(custom_path, 'r') as fid:
             customlist = json.load(fid)
     else:
         customlist = {}
@@ -152,7 +153,7 @@ class CustomFitDialog(Ui_customFitDialog):
 class Fit(object):
     def __init__(self, xydata, fname, p=None):
         """
-        Class containing all informations corresponding to a fitted set of data:
+        Class containing all information corresponding to a fitted set of data:
         the xy sets of data, the fitting function, its parameters and their 
         initialising values as well as the covariant matrix from the fit. Uses 
         scipy.optimize.curve_fit
@@ -361,9 +362,13 @@ class Figure:
         if fig is None:
             fig = plt.gcf()
         self._fig = fig
-        self._ax = fig.get_axes()
+        if not fig.axes:
+            raise ValueError('Needs an axis before fitting')
+        if not fig.axes[0].lines:
+            raise ValueError('Needs some points before fitting')
+        self._ax = fig.axes
         self._dictlin = {(lin.get_color() + lin.get_marker()): lin for axe in self._ax for lin in axe.get_lines()}
-        self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
+        self._currentLine = self._ax[0].lines[0].get_color() + self._ax[0].lines[0].get_marker()
         self._fits = {}
         self._lastFit = []
         self._linFit = []
