@@ -7,7 +7,7 @@ def readme():
 
 
 setup(name='anafit',
-      version='0.1.3',
+      version='0.1.4',
       description='A toolbox providing interactive fitting tools for matplotlib',
       long_description=readme(),
       classifiers=[

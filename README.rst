@@ -7,7 +7,7 @@ Source code repository and issue tracker:
    https://gitlab.com/xamcosta/Anafit
 
 Python Package Index:
-   https://pypi.python.org/pypi/anafit/0.1.3
+   https://pypi.python.org/pypi/anafit/0.1.4
 
 Requirements
 ------------
@@ -21,12 +21,11 @@ pip/setuptools:
    refer to `pip`_ doc webpage.
 
 Matplotlib and PyQt5:
-   When called, Anafit will appear as a new button in the `matplotlib`_ figure 
-   toolbar. However, this requires `PyQt5`_ as matplotlib’s backend. If it is not
-   the backend you’re using, change it using, in the Python console:
-.. code:: python
-   
-   matplotlib.use(‘Qt5Agg’)
+   When called, Anafit menu, based on `PyQt5`_, will appear as a new button in the 
+   `matplotlib`_ figure toolbar. However, this requires Qt5Agg as matplotlib’s 
+   backend. If it is not the backend you’re using, importing anafit will switch your 
+   actual backend to Qt5Agg, destroying all figures already constructed during your 
+   session. 
 
 Other packages:
    To fit, Anafit uses scipy.optimize.curve_fit function from `scipy`_ module.
