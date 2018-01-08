@@ -9,6 +9,13 @@ import functools
 import json
 import os
 import sys
+import matplotlib
+if 'matplotlib.pyplot' in sys.modules:
+    matplotlib.pyplot.switch_backend('Qt5Agg')
+elif 'matplotlib.pylab' in sys.modules:
+    matplotlib.pylab.switch_backend('Qt5Agg')
+elif not matplotlib.get_backend() == 'Qt5Agg':
+        matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5.QtGui import *
