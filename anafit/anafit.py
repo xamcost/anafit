@@ -279,7 +279,7 @@ class DrawLine(object):
         if self.slope is None:
             y = event.ydata
         else:
-            if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+            if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
                 y = np.exp(np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0])) * x ** self.slope
             else:
                 y = self.slope * (x - self.pt1[0]) + self.pt1[1]
@@ -326,18 +326,18 @@ class DrawLine(object):
     
         """
         if self.slope is None:
-            if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+            if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
                 self.slope = (np.log(self.pt2[1]) - np.log(self.pt1[1])) / (np.log(self.pt2[0]) - np.log(self.pt1[0]))
             else:
                 self.slope = (self.pt2[1] - self.pt1[1]) / (self.pt2[0] - self.pt1[0])
-        if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+        if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
             self.b = np.exp(np.log(self.pt2[1]) - self.slope * np.log(self.pt2[0]))
         else:
             self.b = self.pt2[1] - self.slope * self.pt2[0]
         return self.slope, self.b
 
     def __repr__(self):
-        if self.ax.get_xscale() == 'log' and self.ax.get_xscale() == 'log':
+        if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
             lstr = 'Line a*x^n : a = {0:.1f} , n = {1:.1f} \n'.format(self.b, self.slope)
         else:
             lstr = 'Line a*x+b : a = {0:.1f} , b = {1:.1f} \n'.format(self.slope, self.b)
