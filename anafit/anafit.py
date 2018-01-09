@@ -235,7 +235,7 @@ class Fit(object):
                                            p0=self._p)
 
     def __repr__(self):
-        xrange = 'Xrange : [{0:.1f}, {0:.1f}]'.format(np.min(self._xydata[:, 0]), np.max(self._xydata[:, 0]))
+        xrange = 'Xrange : [{0:.1f}, {1:.1f}]'.format(np.min(self._xydata[:, 0]), np.max(self._xydata[:, 0]))
         fit = 'Fitting function : ' + self._fname
         init = 'Initialising parameters : {0}'.format(self._p)
         coef = 'Coeff. : {0}'.format(self._popt)
