@@ -58,11 +58,13 @@ Usage
 -----
 
 First, import anafit:
+
 .. code:: python
 
    import anafit
 
 Note that importing anafit after using matplotlib with another backend than ‘Qt5Agg’ will destroy your current figures ! To prevent this, the best is to set the matplotlib backend in the preferences of your IDE, or manually using: 
+
 .. code:: python
 
    matplotlib.use(‘Qt5Agg’)
