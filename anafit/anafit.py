@@ -18,144 +18,12 @@ elif not matplotlib.get_backend() == 'Qt5Agg':
         matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 from scipy.optimize import curve_fit
+from .ui import Ui_Fit, CustomFitDialog
+from .utilities import *
 
-from .customFitDialog import Ui_customFitDialog
-
-# global variable
-script_path = os.path.dirname(os.path.abspath(__file__))
-
-
-def save_customlist(customlist):
-    """
-    Save custom fitting function dictionary in a txt file customFit.txt
-
-    Parameters
-    ----------
-
-    customlist : dict
-        dict of custom fitting functions. 
-        Ex : {'funcName':'lambda x, a, b : a*x+b ; (1, 0.1)'}
-
-    """
-    with open(os.path.join(script_path, 'customFit.txt'), 'w') as fid:
-        json.dump(customlist, fid, indent=2, sort_keys=True)
-
-
-def get_func(strfunc=None, typefunc=None):
-    """
-    Returns a string or a dict of custom fitting functions
-
-    Parameters
-    ----------
-
-    strfunc : str, optional
-        Must correspond to the name (in dict.keys) of a function : if given, 
-        returns the corresponding string function.
-        Default: None
-    typefunc : str, optional
-        Possible values: linear, power or custom. If provided, returns the 
-        dictionary of the corresponding type of functions.
-        Default: None
-    
-    Returns
-    ----------
-    str or dict
-
-    """
-    linlist = {'ax': 'lambda x, a : a*x ; (1)',
-               'ax+b': 'lambda x, a, b : a*x+b ; (1, 1)',
-               'a(x-b)': 'lambda x, a, b : a*(x-b) ; (1, 1)'}
-    powerlist = {'ax^n': 'lambda x, a, n : a*(x**n) ; (1, 1)',
-                 'a+bx^n': 'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)',
-                 'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
-                 'a+b(x-c)^n': 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
-    custom_path = os.path.join(script_path, 'customFit.txt')
-    if os.path.exists(custom_path):
-        with open(custom_path, 'r') as fid:
-            customlist = json.load(fid)
-    else:
-        customlist = {}
-    funclist = {**linlist, **powerlist, **customlist}
-    if strfunc is None:
-        if typefunc is None:
-            return funclist
-        elif typefunc == 'linear':
-            return linlist
-        elif typefunc == 'power':
-            return powerlist
-        elif typefunc == 'custom':
-            return customlist
-    else:
-        return funclist[strfunc]
-
-
-def from_fdef(fdef):
-    """
-    Returns a function and its initialising parameters' values from a string 
-    containing them, typically 'fdef ; (param)'
-
-    Parameters
-    ----------
-
-    fdef : str, optional
-        String of type 'fdef ; (param)'
-    
-    Returns
-    ----------
-    f: function
-    p: tuple 
-        initialising parameters' values
-
-    """
-    fstr, pstr = fdef.split(';')
-    return eval(fstr), eval(pstr)
-
-
-class CustomFitDialog(Ui_customFitDialog):
-    def __init__(self, dialog, fname=None):
-        """
-        Class constructing a dialog to ask the user for a function name and its
-        corresponding definition
-    
-        Parameters
-        ----------
-    
-        dialog : QDialog
-            base dialog
-        fname : str, optional
-            function name (a key from fitting functions dict). If 
-            provided, the dialog will be used to edit an existing function from 
-            the custom fitting function database
-            Default: None
-    
-        """
-        super().__init__()
-        self.fname = None
-        self.fdef = None
-        self._popt, self._pcov = None, None
-        self.setupUi(dialog)
-        #        self.customFitButtonBox.rejected.connect(self.cancelbutton)
-        self.customFitButtonBox.accepted.connect(self.ok)
-        if fname is not None:
-            dialog.setWindowTitle('Edit Fit')
-            fdef = get_func(strfunc=fname)
-            self.customFitName.setText(fname)
-            self.customFitDef.setText(fdef)
-
-    def ok(self):
-        """
-        Reads the line edit asked to the user, if ok button has been pressed
-    
-        """
-        self.fname = self.customFitName.text()
-        self.fdef = self.customFitDef.text()
-
-
-#    def cancelbutton(self):
-#        self.close()
 
 class Fit(object):
     def __init__(self, xydata, fname, p=None):
@@ -351,7 +219,7 @@ class DrawLine(object):
         return lstr
 
 
-class Figure:
+class Figure(Ui_Fit):
     def __init__(self, fig=None):
         """
         Class constructing the anafit menu and includes it in the toolbar of a
@@ -373,6 +241,7 @@ class Figure:
             raise ValueError('Needs an axis before fitting')
         if not fig.axes[0].lines:
             raise ValueError('Needs some points before fitting')
+        super().__init__()
         self._ax = fig.axes
         self._dictlin = {(lin.get_color() + lin.get_marker()): lin for axe in self._ax for lin in axe.get_lines()}
         self._currentLine = self._ax[0].lines[0].get_color() + self._ax[0].lines[0].get_marker()
@@ -383,82 +252,36 @@ class Figure:
         self._lines = []
 
         toolbar = self._fig.canvas.toolbar
-        self.button = QToolButton()
-        self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.button.setIcon(QIcon(os.path.join(script_path, 'ana_icon.png')))
-        self.button.setPopupMode(QToolButton.InstantPopup)
-        self.menu = QMenu()
-        self.button.setMenu(self.menu)
         toolbar.addWidget(self.button)
 
-        self.menu.addAction('Undo Fit', self.undo_fit, QKeySequence.Undo)
-        self.menu.addAction('Remove all fit', self.remove_all_fit, QKeySequence('Shift+Ctrl+Z'))
-        self.menu.addSeparator()
-
-        self.datasetMenu = QMenu('Dataset')
-        self.menu.addMenu(self.datasetMenu)
-        self.dataAction = {}
+        # Populating the datasets
         for lin in self._dictlin.keys():
-            self.dataAction[lin] = QAction(lin, self.datasetMenu)
+            self.dataAction[lin] = QtWidgets.QAction(lin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(functools.partial(self.set_current_line, lin))
-            self.datasetMenu.addAction(self.dataAction[lin])
+            self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
             self.dataAction[lin].setEnabled(True)
         self.dataAction[self._currentLine].setEnabled(False)
-        self.datasetSep = self.datasetMenu.addSeparator()
-        self.datasetMenu.addAction('Refresh', self.refresh_dataset)
 
-        self.defineRangeMenu = QMenu('Define Range')
-        self.menu.addMenu(self.defineRangeMenu)
-        self.rangeAction = QAction('Current: full', self.defineRangeMenu)
-        self.defineRangeMenu.addAction(self.rangeAction)
-        self.rangeAction.setEnabled(False)
-        self.defineRangeMenu.addSeparator()
-        self.defineRangeMenu.addAction('Define ...', self.define_range, QKeySequence('Shift+Ctrl+X'))
-        self.defineRangeMenu.addAction('Define ROI', self.define_roi, QKeySequence('Ctrl+X'))
-        self.defineRangeMenu.addAction('Reset', self.reset_range)
-
-        self.showFitMenu = QMenu('Show Fit')
-        self.menu.addMenu(self.showFitMenu)
-        self.editFitMenu = QMenu('Edit User Fit')
-        self.menu.addMenu(self.editFitMenu)
-
-        self.linearFitMenu = QMenu('Linear')
-        self.showFitMenu.addMenu(self.linearFitMenu)
+        # Populating linear fits
         for fname in get_func(typefunc='linear').keys():
             self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        self.powerFitMenu = QMenu('Power')
-        self.showFitMenu.addMenu(self.powerFitMenu)
+
+        # Populating power fits
         for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        self.showFitMenu.addSeparator()
 
-        self.showCustomFitActionGroup = QActionGroup(self.showFitMenu)
-        self.showCustomFitActions = {}
+        # Populating custom fits
         for fname in get_func(typefunc='custom').keys():
-            self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
+            self.showCustomFitActions[fname] = QtWidgets.QAction(fname, self.showCustomFitActionGroup)
             self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
             self.showCustomFitActionGroup.addAction(self.showCustomFitActions[fname])
-        self.showFitMenu.addActions(self.showCustomFitActionGroup.actions())
-        self.showFitSep = self.showFitMenu.addSeparator()
-        self.showFitMenu.addAction('Other Fit...', self.other_fit, QKeySequence('Ctrl+O'))
+        self.showFitMenu.insertActions(self.showFitSep, self.showCustomFitActionGroup.actions())
 
-        self.editFitActionGroup = QActionGroup(self.showFitMenu)
-        self.editFitActions = {}
         for fname in get_func(typefunc='custom').keys():
-            self.editFitActions[fname] = QAction(fname, self.editFitActionGroup)
+            self.editFitActions[fname] = QtWidgets.QAction(fname, self.editFitActionGroup)
             self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
             self.editFitActionGroup.addAction(self.editFitActions[fname])
-        self.editFitMenu.addActions(self.editFitActionGroup.actions())
-        self.editFitSep = self.editFitMenu.addSeparator()
-        self.editFitMenu.addAction('New Fit', self.new_fit, QKeySequence.New)
-        self.editFitMenu.addSeparator()
-        self.editFitMenu.addAction('Reset', self.reset_fit)
-
-        self.menu.addSeparator()
-        self.menu.addAction('Draw Line', self.draw_line, QKeySequence('Ctrl+L'))
-        self.menu.addAction('Undo Line', self.undo_line, QKeySequence('Shift+Ctrl+L'))
-        self.menu.addAction('Get Slope', self.get_slope, QKeySequence('Ctrl+G'))
-        self.menu.addAction('Show Slope', self.show_slope, QKeySequence('Shift+Ctrl+G'))
+        self.editFitMenu.insertActions(self.editFitSep, self.editFitActionGroup.actions())
 
     @property
     def fig(self):
@@ -531,7 +354,7 @@ class Figure:
         """
         newlin = {(lin.get_color() + lin.get_marker()): lin for axe in self._ax for lin in axe.get_lines()}
         for lin in set(newlin.keys()).difference(self._dictlin.keys()):
-            self.dataAction[lin] = QAction(lin, self.datasetMenu)
+            self.dataAction[lin] = QtWidgets.QAction(lin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(functools.partial(self.set_current_line, lin))
             self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
             self.dataAction[lin].setEnabled(True)
@@ -548,9 +371,9 @@ class Figure:
         the xrange to consider for fitting
     
         """
-        xrange, ok = QInputDialog.getText(self.showFitMenu,
-                                          'Enter the x-range where to fit',
-                                          'ex: (10, 100) :')
+        xrange, ok = QtWidgets.QInputDialog.getText(self.showFitMenu,
+                                                    'Enter the x-range where to fit',
+                                                    'ex: (10, 100) :')
         if ok:
             self._xrange = eval(xrange)
             self.rangeAction.setText('Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
@@ -576,26 +399,6 @@ class Figure:
         """
         self._xrange = ()
         self.rangeAction.setText('Current : full')
-
-    def add_fit_in_menu(self, fname):
-        """
-        Creates new actions in Show Fit menu and Edit User Fit menu when a new
-        custom fitting function of name fname is defined
-        
-        Parameters
-        ----------
-    
-        fname: str
-            function name (a key from fitting functions dict)
-    
-        """
-        self.showCustomFitActions[fname] = QAction(fname, self.showCustomFitActionGroup)
-        self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
-        self.showFitMenu.insertAction(self.showFitSep, self.showCustomFitActions[fname])
-
-        self.editFitActions[fname] = QAction(fname, self.editFitActionGroup)
-        self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
-        self.editFitMenu.insertAction(self.editFitSep, self.editFitActions[fname])
 
     def fit(self, strfunc):
         """
@@ -632,9 +435,9 @@ class Figure:
         user through a dialog
     
         """
-        fdef, ok = QInputDialog.getText(self.showFitMenu,
-                                        'Enter your fitting function',
-                                        'ex: lambda x, a, b : a*x+b ; (1, 0.1) :')
+        fdef, ok = QtWidgets.QInputDialog.getText(self.showFitMenu,
+                                                  'Enter your fitting function',
+                                                  'ex: lambda x, a, b : a*x+b ; (1, 0.1) :')
         if ok:
             self.fit(fdef)
         else:
@@ -651,10 +454,10 @@ class Figure:
             function name (a key from fitting functions dict)
     
         """
-        efDialog = QDialog()
+        efDialog = QtWidgets.QDialog()
         editFitDialog = CustomFitDialog(efDialog, fname)
         efDialog.show()
-        if efDialog.exec_() == QDialog.Accepted:
+        if efDialog.exec_() == QtWidgets.QDialog.Accepted:
             customlist = get_func(typefunc='custom')
             del customlist[fname]
             self.showFitMenu.removeAction(self.showCustomFitActions[fname])
@@ -671,10 +474,10 @@ class Figure:
         customFit.txt
     
         """
-        cfDialog = QDialog()
+        cfDialog = QtWidgets.QDialog()
         customFitDialog = CustomFitDialog(cfDialog)
         cfDialog.show()
-        if cfDialog.exec_() == QDialog.Accepted:
+        if cfDialog.exec_() == QtWidgets.QDialog.Accepted:
             customlist = get_func(typefunc='custom')
             customlist[customFitDialog.fname] = customFitDialog.fdef
             save_customlist(customlist)
@@ -742,9 +545,9 @@ class Figure:
         or to a given exponent if scale is log-log.
     
         """
-        slope, ok = QInputDialog.getText(self.menu,
-                                         'Enter the slope to show',
-                                         'ex: -1')
+        slope, ok = QtWidgets.QInputDialog.getText(self.menu,
+                                                   'Enter the slope to show',
+                                                   'ex: -1')
         if ok:
             self._lines.append(DrawLine(self._fig, show_slope=eval(slope)))
         else:
