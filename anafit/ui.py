@@ -55,14 +55,11 @@ class Ui_Fit:
 
         self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.showCustomFitActions = {}
-        self.showFitMenu.addActions(self.showCustomFitActionGroup.actions())
         self.showFitSep = self.showFitMenu.addSeparator()
         self.showFitMenu.addAction('Other Fit...', self.other_fit, QtGui.QKeySequence('Ctrl+O'))
 
         self.editFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.editFitActions = {}
-
-        self.editFitMenu.addActions(self.editFitActionGroup.actions())
         self.editFitSep = self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('New Fit', self.new_fit, QtGui.QKeySequence.New)
         self.editFitMenu.addSeparator()

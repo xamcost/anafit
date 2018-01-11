@@ -271,8 +271,6 @@ class Figure(Ui_Fit):
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating custom fits
-        self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
-        self.showCustomFitActions = {}
         for fname in get_func(typefunc='custom').keys():
             self.showCustomFitActions[fname] = QtWidgets.QAction(fname, self.showCustomFitActionGroup)
             self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
