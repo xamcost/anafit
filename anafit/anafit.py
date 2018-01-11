@@ -258,23 +258,17 @@ class Figure(Ui_Fit):
         for lin in self._dictlin.keys():
             self.dataAction[lin] = QtWidgets.QAction(lin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(functools.partial(self.set_current_line, lin))
-            self.datasetMenu.addAction(self.dataAction[lin])
+            self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
             self.dataAction[lin].setEnabled(True)
         self.dataAction[self._currentLine].setEnabled(False)
-        self.datasetSep = self.datasetMenu.addSeparator()
 
         # Populating linear fits
-        self.linearFitMenu = QtWidgets.QMenu('Linear')
-        self.showFitMenu.addMenu(self.linearFitMenu)
         for fname in get_func(typefunc='linear').keys():
             self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating power fits
-        self.powerFitMenu = QtWidgets.QMenu('Power')
-        self.showFitMenu.addMenu(self.powerFitMenu)
         for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
-        self.showFitMenu.addSeparator()
 
         # Populating custom fits
         self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
@@ -283,17 +277,13 @@ class Figure(Ui_Fit):
             self.showCustomFitActions[fname] = QtWidgets.QAction(fname, self.showCustomFitActionGroup)
             self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
             self.showCustomFitActionGroup.addAction(self.showCustomFitActions[fname])
-        self.showFitMenu.addActions(self.showCustomFitActionGroup.actions())
-
-        # Populating other fits
-        self.showFitSep = self.showFitMenu.addSeparator()
-        self.showFitMenu.addAction('Other Fit...', self.other_fit, QtGui.QKeySequence('Ctrl+O'))
+        self.showFitMenu.insertActions(self.showFitSep, self.showCustomFitActionGroup.actions())
 
         for fname in get_func(typefunc='custom').keys():
             self.editFitActions[fname] = QtWidgets.QAction(fname, self.editFitActionGroup)
             self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
             self.editFitActionGroup.addAction(self.editFitActions[fname])
-        self.editFitMenu.addActions(self.editFitActionGroup.actions())
+        self.editFitMenu.insertActions(self.editFitSep, self.editFitActionGroup.actions())
 
     @property
     def fig(self):
