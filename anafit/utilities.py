@@ -46,7 +46,7 @@ def get_func(strfunc=None, typefunc=None):
                'ax+b': 'lambda x, a, b : a*x+b ; (1, 1)',
                'a(x-b)': 'lambda x, a, b : a*(x-b) ; (1, 1)'}
     powerlist = {'ax^n': 'lambda x, a, n : a*(x**n) ; (1, 1)',
-                 'a+bx^n': 'lambda x, a, c, n : a+b*(x**n) ; (1, 1, 1)',
+                 'a+bx^n': 'lambda x, a, b, n : a+b*(x**n) ; (1, 1, 1)',
                  'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
                  'a+b(x-c)^n': 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
     custom_path = os.path.join(script_path, 'customFit.txt')
