@@ -1,5 +1,6 @@
 import os
 import json
+import numpy
 
 # global variable
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -89,3 +90,26 @@ def from_fdef(fdef):
     """
     fstr, pstr = fdef.split(';')
     return eval(fstr), eval(pstr)
+
+def str_line(lin):
+    """
+    Returns a string in the form 'marker' + 'linestyle' from a 
+    matplotlib.lines.line2D object
+
+    Parameters
+    ----------
+
+    lin : matplotlib.lines.line2D object
+
+    Returns
+    ----------
+    strlin: str
+        string in the form 'marker' + 'linestyle'
+    """
+    strlin = ''
+    if lin.get_marker() is not 'None':
+        strlin = strlin + lin.get_marker()
+    if lin.get_linestyle() is not 'None':
+        strlin = strlin + lin.get_linestyle()
+    return strlin
+
