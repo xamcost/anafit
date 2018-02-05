@@ -29,9 +29,9 @@ class Ui_Fit:
         self.datasetMenu = QtWidgets.QMenu('Dataset')
         self.menu.addMenu(self.datasetMenu)
         self.dataAction = {}
+        self.dataActionIcon = {}
         self.datasetSep = self.datasetMenu.addSeparator()
         self.datasetMenu.addAction('Refresh', self.refresh_dataset)
-
         self.defineRangeMenu = QtWidgets.QMenu('Define Range')
         self.menu.addMenu(self.defineRangeMenu)
         self.rangeAction = QtWidgets.QAction('Current: full', self.defineRangeMenu)
@@ -44,26 +44,36 @@ class Ui_Fit:
 
         self.showFitMenu = QtWidgets.QMenu('Show Fit')
         self.menu.addMenu(self.showFitMenu)
-        self.editFitMenu = QtWidgets.QMenu('Edit User Fit')
-        self.menu.addMenu(self.editFitMenu)
-
         self.linearFitMenu = QtWidgets.QMenu('Linear')
         self.showFitMenu.addMenu(self.linearFitMenu)
         self.powerFitMenu = QtWidgets.QMenu('Power')
         self.showFitMenu.addMenu(self.powerFitMenu)
         self.showFitMenu.addSeparator()
-
         self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.showCustomFitActions = {}
         self.showFitSep = self.showFitMenu.addSeparator()
         self.showFitMenu.addAction('Other Fit...', self.other_fit, QtGui.QKeySequence('Ctrl+O'))
-
+        
+        self.editFitMenu = QtWidgets.QMenu('Edit User Fit')
+        self.menu.addMenu(self.editFitMenu)
         self.editFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.editFitActions = {}
         self.editFitSep = self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('New Fit', self.new_fit, QtGui.QKeySequence.New)
         self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('Reset', self.reset_fit)
+        
+        self.displayMenu = QtWidgets.QMenu('Display Options')
+        self.menu.addMenu(self.displayMenu)
+        self.showFitInfoAction = QtWidgets.QAction('Show Fit Info', self.displayMenu)
+        self.showFitInfoAction.setCheckable(True)
+        self.showFitInfoAction.setShortcut(QtGui.QKeySequence('Ctrl+I'))
+        self.showFitInfoAction.triggered.connect(self.show_fitInfo)
+        self.displayMenu.addAction(self.showFitInfoAction)
+        self.showConfidenceAction = QtWidgets.QAction('Show Confidence', self.displayMenu)
+        self.showConfidenceAction.setCheckable(True)
+        self.showConfidenceAction.triggered.connect(self.show_confidence)
+        self.displayMenu.addAction(self.showConfidenceAction)
 
         self.menu.addSeparator()
         self.menu.addAction('Draw Line', self.draw_line, QtGui.QKeySequence('Ctrl+L'))
@@ -161,6 +171,12 @@ class Ui_Fit:
         pass
 
     def show_slope(self):
+        pass
+    
+    def show_fitInfo(self):
+        pass
+    
+    def show_confidence(self):
         pass
 
 

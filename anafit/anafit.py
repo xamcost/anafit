@@ -20,13 +20,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+from PyQt5 import QtCore
 from scipy.optimize import curve_fit
 from .ui import Ui_Fit, CustomFitDialog
 from .utilities import *
 
 
 class Fit(object):
-    def __init__(self, xydata, fname, p=None):
+    def __init__(self, line, xrange, fname, p=None):
         """
         Class containing all information corresponding to a fitted set of data:
         the xy sets of data, the fitting function, its parameters and their 
@@ -36,8 +37,10 @@ class Fit(object):
         Parameters
         ----------
     
-        xydata: numpy.ndarray
-            2 columns array containing x and y data to be fitted
+        line: matplotlib.lines.Line2D object
+            matplotlib Line2D object corresponding to the curve to fit
+        xrange: tuple
+            tuple defining the range of data to consider when fitting
         fname: str
             fitting function name (a key from fitting functions dict)
         p: tuple, optional
@@ -46,9 +49,19 @@ class Fit(object):
             Default: None
     
         """
-        self._popt, self._pcov = None, None
-        self._xydata = xydata
+        self._lin = line
+        self._xrange = xrange
         self._fname = fname
+        if self._xrange is None:
+            self._xydata = self._lin.get_xydata()
+        else:
+            self._xydata = np.array([xy for xy in self._lin.get_xydata() if self._xrange[0] < xy[0] < self._xrange[1]])
+        self._popt, self._pcov = None, None
+        self._sigma = None
+        self._linfit = None
+        self._up = None
+        self._down = None
+        self._linConfidence = None
         if ';' not in fname:
             if p is None:
                 fdef = get_func(self._fname)
@@ -62,12 +75,16 @@ class Fit(object):
         self.fit()
 
     @property
-    def xydata(self):
-        return self._xydata
+    def linfit(self):
+        return self._linfit
 
-    @xydata.setter
-    def xydata(self, xydata):
-        self.__init__(xydata, self._fname)
+    @property
+    def xrange(self):
+        return self._xrange
+
+    @xrange.setter
+    def xrange(self, xrange):
+        self.__init__(self._lin, xrange, self._fname)
 
     @property
     def fname(self):
@@ -75,7 +92,11 @@ class Fit(object):
 
     @fname.setter
     def fname(self, fname):
-        self.__init__(self._xydata, fname)
+        self.__init__(self._lin, self._xrange, fname)
+        
+    @property
+    def xydata(self):
+        return self._xydata
 
     @property
     def f(self):
@@ -97,17 +118,73 @@ class Fit(object):
     @property
     def pcov(self):
         return self._pcov
+    
+    @property
+    def sigma(self):
+        return self._sigma
 
     def fit(self):
+        """
+        Fit the datas contained in self._lin with the function self._fname, in 
+        the range self._xrange.
+    
+        """
         self._popt, self._pcov = curve_fit(self._f, self._xydata[:, 0], self._xydata[:, 1],
                                            p0=self._p)
+        self._sigma = np.sqrt(np.diagonal(self._pcov))
+        
+    def plot(self, showInfo=False, showConf=False):
+        """
+        Plots the fitted datas.
+    
+        """
+        linfit = self._lin.axes.plot(self._xydata[:, 0], 
+                                     list(map(lambda x: self._f(x, *self._popt), self._xydata[:, 0])), 'orange')
+        self._linfit = linfit[0]
+        self._up = self._f(self._xydata[:, 0], *(self._popt + self._sigma))
+        self._low = self._f(self._xydata[:, 0], *(self._popt - self._sigma))
+        self._linConfidence = self._lin.axes.fill_between(self._xydata[:, 0], self._low, self._up, 
+                                              color='black', alpha = 0.15)
+        self._linConfidence.set_visible(showConf)
+        if ';' in self._fname:
+            fdef, _ = self._fname.split(';')
+        else:
+            fdef = self._fname
+            fitInfo = 'Fit ' + fdef + ' :'
+        for coef, err in zip(self._popt, self._sigma):
+            fitInfo = fitInfo + '\n{0:.2f} +/- {1:.2f}'.format(coef, err)
+        xmin, xmax = self._lin.axes.get_xlim()
+        dx = xmax - xmin
+        ymin, ymax = self._lin.axes.get_ylim()
+        dy = ymax - ymin
+        xbox = xmin + 0.05*dx
+        ybox = ymax - 0.2*dy
+        self._fitbox = self._lin.axes.text(xbox, ybox, fitInfo)
+        self._fitbox.set_visible(showInfo)
+        
+    def show_fitInfo(self, disp=False):
+        """
+        Displays a text box containing some fit infos on the figure.
+    
+        """
+        self._fitbox.set_visible(disp)
+        plt.draw()
+        
+    def show_confidence(self, disp=False):
+        """
+        Displays the range of confidence around the fitted curve.
+    
+        """
+        self._linConfidence.set_visible(disp)
+        plt.draw()
 
     def __repr__(self):
         xrange = 'Xrange : [{0:.1f}, {1:.1f}]'.format(np.min(self._xydata[:, 0]), np.max(self._xydata[:, 0]))
         fit = 'Fitting function : ' + self._fname
         init = 'Initialising parameters : {0}'.format(self._p)
         coef = 'Coeff. : {0}'.format(self._popt)
-        return xrange + '\n' + fit + '\n' + init + '\n' + coef
+        uncert = 'Uncertainty: {0}'.format(self._sigma)
+        return fit + '\n' + xrange + '\n' + init + '\n' + coef + '\n' + uncert
 
 
 class DrawLine(object):
@@ -243,24 +320,27 @@ class Figure(Ui_Fit):
             raise ValueError('Needs some points before fitting')
         super().__init__()
         self._ax = fig.axes
-        self._dictlin = {(lin.get_color() + lin.get_marker()): lin for axe in self._ax for lin in axe.get_lines()}
-        self._currentLine = self._ax[0].lines[0].get_color() + self._ax[0].lines[0].get_marker()
-        self._fits = {}
+        self._dictlin = {(str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin for axe in self._ax for lin in axe.get_lines()}
+        self._currentLine = str(self._ax[0].lines[0].get_color()) + self._ax[0].lines[0].get_marker() + self._ax[0].lines[0].get_linestyle()
+        self._fits = []
         self._lastFit = []
-        self._linFit = []
-        self._xrange = ()
+        self._xrange = None
         self._lines = []
 
         toolbar = self._fig.canvas.toolbar
         toolbar.addWidget(self.button)
 
         # Populating the datasets
-        for lin in self._dictlin.keys():
-            self.dataAction[lin] = QtWidgets.QAction(lin, self.datasetMenu)
+        for lin, linval in self._dictlin.items():
+            strlin = str_line(linval)
+            self.dataAction[lin] = QtWidgets.QAction(strlin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(functools.partial(self.set_current_line, lin))
             self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
-            self.dataAction[lin].setEnabled(True)
-        self.dataAction[self._currentLine].setEnabled(False)
+            self.dataAction[lin].setCheckable(True)
+            self.dataActionIcon[lin] = QtGui.QPixmap(100, 100)
+            self.dataActionIcon[lin].fill(QtGui.QColor(*list(map(int,255*np.array(matplotlib.colors.to_rgb(linval.get_color()), dtype=float)))))
+            self.dataAction[lin].setIcon(QtGui.QIcon(self.dataActionIcon[lin]))
+        self.dataAction[self._currentLine].setChecked(True)
 
         # Populating linear fits
         for fname in get_func(typefunc='linear').keys():
@@ -298,8 +378,8 @@ class Figure(Ui_Fit):
     @current_line.setter
     def current_line(self, lin):
         for key in self._dictlin.keys():
-            self.dataAction[key].setEnabled(True)
-        self.dataAction[lin].setEnabled(False)
+            self.dataAction[key].setChecked(False)
+        self.dataAction[lin].setChecked(True)
         self._currentLine = lin
 
     def set_current_line(self, lin):
@@ -330,8 +410,10 @@ class Figure(Ui_Fit):
         Note that it does not affect the fit history !
     
         """
-        self._linFit[-1][0].remove()
-        del self._linFit[-1]
+        if len(self.fits) == 0:
+            return
+        self.fits[-1].linfit.remove()
+        del self._fits[-1]
         self.fig.canvas.draw()
 
     def remove_all_fit(self):
@@ -339,10 +421,9 @@ class Figure(Ui_Fit):
         Slot to remove all fit. Also deletes the fit history !
     
         """
-        for lin in self._linFit:
-            lin[0].remove()
-        self._linFit = []
-        self._fits = {}
+        for f in self.fits:
+            f.linfit.remove()
+        self._fits = []
         self._lastFit = []
         self.fig.canvas.draw()
 
@@ -352,18 +433,25 @@ class Figure(Ui_Fit):
         after anafit.Figure() called
         
         """
-        newlin = {(lin.get_color() + lin.get_marker()): lin for axe in self._ax for lin in axe.get_lines()}
+        newlin = {(str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin for axe in self._ax for lin in axe.get_lines()}
         for lin in set(newlin.keys()).difference(self._dictlin.keys()):
-            self.dataAction[lin] = QtWidgets.QAction(lin, self.datasetMenu)
+            strlin = str_line(newlin[lin])
+            self.dataAction[lin] = QtWidgets.QAction(strlin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(functools.partial(self.set_current_line, lin))
             self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
-            self.dataAction[lin].setEnabled(True)
+            self.dataAction[lin].setCheckable(True)
+            self.dataActionIcon[lin] = QtGui.QPixmap(100, 100)
+            self.dataActionIcon[lin].fill(QtGui.QColor(*list(map(int,255*np.array(matplotlib.colors.to_rgb(linval.get_color()), dtype=float)))))
+            self.dataAction[lin].setIcon(QtGui.QIcon(self.dataActionIcon[lin]))
         for lin in set(self._dictlin.keys()).difference(newlin.keys()):
             self.datasetMenu.removeAction(self.dataAction[lin])
             del self.dataAction[lin]
+            del self.dataActionIcon[lin]
         self._dictlin = newlin
-        self._currentLine = self._ax[0].get_lines()[0].get_color() + self._ax[0].get_lines()[0].get_marker()
-        self.dataAction[self._currentLine].setEnabled(False)
+        for key in self._dictlin.keys():
+            self.dataAction[key].setChecked(False)
+        self._currentLine = str(self._ax[0].lines[0].get_color()) + self._ax[0].lines[0].get_marker() + self._ax[0].lines[0].get_linestyle()
+        self.dataAction[self._currentLine].setChecked(True)
 
     def define_range(self):
         """
@@ -397,7 +485,7 @@ class Figure(Ui_Fit):
         Slot to reset the xr-fitting range, therefore using the full range
     
         """
-        self._xrange = ()
+        self._xrange = None
         self.rangeAction.setText('Current : full')
 
     def fit(self, strfunc):
@@ -412,20 +500,10 @@ class Figure(Ui_Fit):
             function name (a key from fitting functions dict)
     
         """
-        lin = self._dictlin[self._currentLine]
-        if self._xrange is ():
-            xydata = lin.get_xydata()
-        else:
-            xydata = np.array([xy for xy in lin.get_xydata() if self._xrange[0] < xy[0] < self._xrange[1]])
-        fitted = Fit(xydata, strfunc)
-        if self._currentLine in self._fits.keys():
-            self._fits[self._currentLine].append(fitted)
-        else:
-            self._fits[self._currentLine] = [fitted]
-        self._lastFit = fitted
-        linfit = lin.axes.plot(self._lastFit.xydata[:, 0], list(
-            map(lambda x: self._lastFit.f(x, *self._lastFit.popt), self._lastFit.xydata[:, 0])), 'r-')
-        self._linFit.append(linfit)
+        self._fits.append(Fit(self._dictlin[self._currentLine], self._xrange, strfunc))
+        self._lastFit = self._fits[-1]
+        self._lastFit.plot(self.showFitInfoAction.isChecked(), 
+                           self.showConfidenceAction.isChecked())
         print(self._lastFit)
         self.fig.canvas.draw()
 
@@ -552,6 +630,22 @@ class Figure(Ui_Fit):
             self._lines.append(DrawLine(self._fig, show_slope=eval(slope)))
         else:
             pass
+        
+    def show_fitInfo(self):
+        """
+        Slot to show a text box containing some fit infos on the figure .
+    
+        """
+        for f in self._fits:
+            f.show_fitInfo(self.showFitInfoAction.isChecked())
+        
+    def show_confidence(self):
+        """
+        Slot to plot the range of confidence around fitting curves.
+    
+        """
+        for f in self._fits:
+            f.show_confidence(self.showConfidenceAction.isChecked())
 
 
 if __name__ == "__main__":
