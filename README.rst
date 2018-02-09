@@ -23,9 +23,9 @@ pip/setuptools:
 Matplotlib and PyQt5:
    When called, Anafit menu, based on `PyQt5`_, will appear as a new button in the 
    `matplotlib`_ figure toolbar. However, this requires Qt5Agg as matplotlib’s 
-   backend. If it is not the backend you’re using, importing anafit will switch your 
-   actual backend to Qt5Agg, destroying all figures already constructed during your 
-   session. 
+   backend. 
+   WARNING : When imported, anafit will switch your actual backend to Qt5Agg, 
+   destroying all figures already constructed during your session. 
 
 Other packages:
    To fit, Anafit uses scipy.optimize.curve_fit function from `scipy`_ module.
@@ -87,11 +87,16 @@ current active figure.
 Fitting a curve
 ^^^^^^^^^^^^^^^
 
-In case several curves are plotted, you can select the one you wanna fit in the “Dataset” menu. The dataset are represented by a string concatenating their color and their marker. 
+In case several curves are plotted, you can select the one you wanna fit in the “Dataset” menu. The dataset are represented by a icon filled with the color of the curve, followed by their marker. 
 
 Then, in the “Show Fit” menu, you can select predefined fitting functions, sorted by types (linear, power, etc…), or your own saved fitting functions, or any function you want to define on the way, using “Other Fit…”.
 
-The fitting curve will appear as a red line on your figure, and its parameters will appear in the Python console. You can access them anytime through the attribute ana.lastFit . More generally, an history of fits is stored in ana.fits .
+The fitting curve will appear as an orange line on your figure, and its parameters will appear in the Python console. You can access them anytime through the attribute ana.lastFit . More generally, an history of fits is stored in ana.fits . These anafit.Fit object contains not only the fit informations, but also the handles of the fit line, allowing to easily change the style of the fit curve. For instance, you can change the color of the last fit by simply running:
+
+.. code:: python
+ 
+   ana.fits[-1].linfit.set_color(‘r’)
+
 
 Defining a region of interest (ROI)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -109,5 +114,10 @@ Getting slopes from drawn lines
 You can draw a line on the figure by selecting ‘Draw Line’, and remove it using ‘Undo Line’. Use ‘Get Slope’ to access the parameters of this line: in log-log scale, this returns the prefactor and the exponent of a power law.
 
 You can draw a line corresponding to a given slope (a given exponent in log-log scale) using ‘Show Slope’.
+
+Displaying fit infos
+^^^^^^^^^^^^^^^^^^^^
+
+You can display the range of confidence of the fit curve by selecting ’Show Confidence’. The interval of confidence is evaluated using the square root of the diagonal of the covariance matrix. 
 
 
