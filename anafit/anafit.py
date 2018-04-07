@@ -417,7 +417,13 @@ class Figure(Ui_Fit):
         if len(self.fits) == 0:
             return
         self.fits[-1].linfit.remove()
+        self.fits[-1].show_fitInfo(False)
         del self._fits[-1]
+        try:
+            self._lastFit = self._fits[-1]
+            self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
+        except IndexError:
+            self._lastFit = []
         self.fig.canvas.draw()
 
     def remove_all_fit(self):
@@ -427,6 +433,7 @@ class Figure(Ui_Fit):
         """
         for f in self.fits:
             f.linfit.remove()
+        self._lastFit.show_fitInfo(False)
         self._fits = []
         self._lastFit = []
         self.fig.canvas.draw()
@@ -504,6 +511,10 @@ class Figure(Ui_Fit):
             function name (a key from fitting functions dict)
     
         """
+        try:
+            self._fits[-1].show_fitInfo(False)
+        except IndexError:
+            pass
         self._fits.append(Fit(self._dictlin[self._currentLine], self._xrange, strfunc))
         self._lastFit = self._fits[-1]
         self._lastFit.plot(self.showFitInfoAction.isChecked(), 
@@ -637,11 +648,10 @@ class Figure(Ui_Fit):
         
     def show_fitInfo(self):
         """
-        Slot to show a text box containing some fit infos on the figure .
+        Slot to show a text box containing some fit infos of the last fit.
     
         """
-        for f in self._fits:
-            f.show_fitInfo(self.showFitInfoAction.isChecked())
+        self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
         
     def show_confidence(self):
         """
