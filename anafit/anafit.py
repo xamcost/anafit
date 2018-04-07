@@ -349,6 +349,10 @@ class Figure(Ui_Fit):
         # Populating power fits
         for fname in get_func(typefunc='power').keys():
             self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
+            
+        # Populating exp fits
+        for fname in get_func(typefunc='exp').keys():
+            self.expFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating custom fits
         for fname in get_func(typefunc='custom').keys():

@@ -43,13 +43,19 @@ def get_func(strfunc=None, typefunc=None):
     str or dict
 
     """
-    linlist = {'ax': 'lambda x, a : a*x ; (1)',
+    linlist = {'constant': 'lambda x, a : a ; (1)', 
+               'ax': 'lambda x, a : a*x ; (1)',
                'ax+b': 'lambda x, a, b : a*x+b ; (1, 1)',
                'a(x-b)': 'lambda x, a, b : a*(x-b) ; (1, 1)'}
     powerlist = {'ax^n': 'lambda x, a, n : a*(x**n) ; (1, 1)',
                  'a+bx^n': 'lambda x, a, b, n : a+b*(x**n) ; (1, 1, 1)',
                  'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
                  'a+b(x-c)^n': 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
+    explist = {'exp(x/a)': 'lambda x, a : a*numpy.exp(x/a) ; (1)', 
+               'a*exp(x/b)': 'lambda x, a, b : a*numpy.exp(x/b) ; (1, 1)', 
+               'a*exp(x/b) + c': 'lambda x, a, b, c : a*numpy.exp(x/b) + c ; (1, 1, 1)', 
+               'a*exp((x-b)/c)': 'lambda x, a, b, c : a*numpy.exp((x-b)/c) ; (1, 1, 1)',
+               'a(1-exp(-x/b))': 'lambda x, a, b : a*(1 - numpy.exp(-x/b)) ; (1, 1)'}
     custom_path = os.path.join(script_path, 'customFit.txt')
     if os.path.exists(custom_path):
         with open(custom_path, 'r') as fid:
@@ -64,6 +70,8 @@ def get_func(strfunc=None, typefunc=None):
             return linlist
         elif typefunc == 'power':
             return powerlist
+        elif typefunc == 'exp':
+            return explist
         elif typefunc == 'custom':
             return customlist
     else:

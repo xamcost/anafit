@@ -48,6 +48,8 @@ class Ui_Fit:
         self.showFitMenu.addMenu(self.linearFitMenu)
         self.powerFitMenu = QtWidgets.QMenu('Power')
         self.showFitMenu.addMenu(self.powerFitMenu)
+        self.expFitMenu = QtWidgets.QMenu('Exponential')
+        self.showFitMenu.addMenu(self.expFitMenu)
         self.showFitMenu.addSeparator()
         self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.showCustomFitActions = {}
