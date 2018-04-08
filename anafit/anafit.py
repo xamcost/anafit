@@ -418,6 +418,7 @@ class Figure(Ui_Fit):
             return
         self.fits[-1].linfit.remove()
         self.fits[-1].show_fitInfo(False)
+        self.fits[-1].show_confidence(False)
         del self._fits[-1]
         try:
             self._lastFit = self._fits[-1]
@@ -433,6 +434,7 @@ class Figure(Ui_Fit):
         """
         for f in self.fits:
             f.linfit.remove()
+            f.show_confidence(False)
         self._lastFit.show_fitInfo(False)
         self._fits = []
         self._lastFit = []
@@ -651,7 +653,10 @@ class Figure(Ui_Fit):
         Slot to show a text box containing some fit infos of the last fit.
     
         """
-        self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
+        if self._lastFit == []:
+            return
+        else:
+            self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
         
     def show_confidence(self):
         """
