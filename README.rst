@@ -7,7 +7,7 @@ Source code repository and issue tracker:
    https://gitlab.com/xamcosta/Anafit
 
 Python Package Index:
-   https://pypi.python.org/pypi/anafit/0.1.4
+   https://pypi.python.org/pypi/anafit/0.1.5
 
 Requirements
 ------------
@@ -63,13 +63,7 @@ First, import anafit:
 
    import anafit
 
-Note that importing anafit after using matplotlib with another backend than ‘Qt5Agg’ will destroy your current figures ! To prevent this, the best is to set the matplotlib backend in the preferences of your IDE, or manually using: 
-
-.. code:: python
-
-   matplotlib.use(‘Qt5Agg’)
-
-BEFORE importing matplotlib.pyplot or pylab.
+Note that importing anafit will switch matplotlib’s backend to ‘Qt5Agg’, destroying your current figures ! To prevent this, the best is to import anafit BEFORE importing matplotlib.pyplot or pylab.
 
 Adding anafit button to a matplotlib figure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
