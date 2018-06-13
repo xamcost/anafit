@@ -62,7 +62,7 @@ def get_func(strfunc=None, typefunc=None):
             customlist = json.load(fid)
     else:
         customlist = {}
-    funclist = {**linlist, **powerlist, **customlist}
+    funclist = {**linlist, **powerlist, **explist, **customlist}
     if strfunc is None:
         if typefunc is None:
             return funclist
