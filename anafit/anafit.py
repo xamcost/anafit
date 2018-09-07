@@ -324,6 +324,8 @@ class Figure(Ui_Fit):
         self._currentLine = str(self._ax[0].lines[0].get_color()) + self._ax[0].lines[0].get_marker() + self._ax[0].lines[0].get_linestyle()
         self._fits = []
         self._lastFit = []
+        self._drawnLines = []
+        self._lastLine = []
         self._xrange = None
         self._lines = []
 
@@ -487,7 +489,7 @@ class Figure(Ui_Fit):
     
         """
         pts = plt.ginput(2, show_clicks=True)
-        if pts[0][0] < pts[0][1]:
+        if pts[0][0] < pts[1][0]:
             self._xrange = (pts[0][0], pts[1][0])
         else:
             self._xrange = (pts[1][0], pts[0][0])
@@ -599,7 +601,10 @@ class Figure(Ui_Fit):
         Slot to dynamically draw a line on the figure window
     
         """
-        self._lines.append(DrawLine(self._fig))
+        dlin = DrawLine(self._fig)
+        self._drawnLines.append(dlin)
+        self._lastLine = dlin
+        self._lines.append(dlin)
 
     def undo_line(self):
         """
@@ -609,6 +614,8 @@ class Figure(Ui_Fit):
         if self._lines:
             self._lines[-1].lx.remove()
             del self._lines[-1]
+            del self._drawnLines[-1]
+            self._lastLine = []
             self.fig.canvas.draw()
 
     def remove_all_lines(self):
