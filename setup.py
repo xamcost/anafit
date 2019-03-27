@@ -7,11 +7,11 @@ def readme():
 
 
 setup(name='anafit',
-      version='0.1.5',
+      version='0.1.6',
       description='A toolbox providing interactive fitting tools for matplotlib',
       long_description=readme(),
       classifiers=[
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering'
       ],
       keywords='matplotlib fit',
