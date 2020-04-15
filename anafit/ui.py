@@ -1,10 +1,9 @@
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 import os
-import matplotlib.pyplot as plt
 import functools
-from .customFitDialog import Ui_customFitDialog
-from .utilities import *
+from customFitDialog import Ui_customFitDialog
+from utilities import script_path, get_func
 
 
 class Ui_Fit:
@@ -17,13 +16,18 @@ class Ui_Fit:
 
         self.button = QtWidgets.QToolButton()
         self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.button.setIcon(QtGui.QIcon(os.path.join(script_path, 'ana_icon.png')))
+        self.button.setIcon(
+            QtGui.QIcon(os.path.join(script_path, 'ana_icon.png')))
         self.button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.menu = QtWidgets.QMenu()
         self.button.setMenu(self.menu)
 
         self.menu.addAction('Undo Fit', self.undo_fit, QtGui.QKeySequence.Undo)
-        self.menu.addAction('Remove all fit', self.remove_all_fit, QtGui.QKeySequence('Shift+Ctrl+Z'))
+        self.menu.addAction(
+            'Remove all fit',
+            self.remove_all_fit,
+            QtGui.QKeySequence('Shift+Ctrl+Z')
+        )
         self.menu.addSeparator()
 
         self.datasetMenu = QtWidgets.QMenu('Dataset')
@@ -34,12 +38,21 @@ class Ui_Fit:
         self.datasetMenu.addAction('Refresh', self.refresh_dataset)
         self.defineRangeMenu = QtWidgets.QMenu('Define Range')
         self.menu.addMenu(self.defineRangeMenu)
-        self.rangeAction = QtWidgets.QAction('Current: full', self.defineRangeMenu)
+        self.rangeAction = QtWidgets.QAction(
+            'Current: full', self.defineRangeMenu)
         self.defineRangeMenu.addAction(self.rangeAction)
         self.rangeAction.setEnabled(False)
         self.defineRangeMenu.addSeparator()
-        self.defineRangeMenu.addAction('Define ...', self.define_range, QtGui.QKeySequence('Shift+Ctrl+X'))
-        self.defineRangeMenu.addAction('Define ROI', self.define_roi, QtGui.QKeySequence('Ctrl+X'))
+        self.defineRangeMenu.addAction(
+            'Define ...',
+            self.define_range,
+            QtGui.QKeySequence('Shift+Ctrl+X')
+        )
+        self.defineRangeMenu.addAction(
+            'Define ROI',
+            self.define_roi,
+            QtGui.QKeySequence('Ctrl+X')
+        )
         self.defineRangeMenu.addAction('Reset', self.reset_range)
 
         self.showFitMenu = QtWidgets.QMenu('Show Fit')
@@ -51,37 +64,64 @@ class Ui_Fit:
         self.expFitMenu = QtWidgets.QMenu('Exponential')
         self.showFitMenu.addMenu(self.expFitMenu)
         self.showFitMenu.addSeparator()
-        self.showCustomFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
+        self.showCustomFitActionGroup = QtWidgets.QActionGroup(
+            self.showFitMenu)
         self.showCustomFitActions = {}
         self.showFitSep = self.showFitMenu.addSeparator()
-        self.showFitMenu.addAction('Other Fit...', self.other_fit, QtGui.QKeySequence('Ctrl+O'))
-        
+        self.showFitMenu.addAction(
+            'Other Fit...',
+            self.other_fit,
+            QtGui.QKeySequence('Ctrl+O')
+        )
+
         self.editFitMenu = QtWidgets.QMenu('Edit User Fit')
         self.menu.addMenu(self.editFitMenu)
         self.editFitActionGroup = QtWidgets.QActionGroup(self.showFitMenu)
         self.editFitActions = {}
         self.editFitSep = self.editFitMenu.addSeparator()
-        self.editFitMenu.addAction('New Fit', self.new_fit, QtGui.QKeySequence.New)
+        self.editFitMenu.addAction(
+            'New Fit',
+            self.new_fit,
+            QtGui.QKeySequence.New
+        )
         self.editFitMenu.addSeparator()
         self.editFitMenu.addAction('Reset', self.reset_fit)
-        
+
         self.displayMenu = QtWidgets.QMenu('Display Options')
         self.menu.addMenu(self.displayMenu)
-        self.showFitInfoAction = QtWidgets.QAction('Show Fit Info', self.displayMenu)
+        self.showFitInfoAction = QtWidgets.QAction(
+            'Show Fit Info', self.displayMenu)
         self.showFitInfoAction.setCheckable(True)
         self.showFitInfoAction.setShortcut(QtGui.QKeySequence('Ctrl+I'))
         self.showFitInfoAction.triggered.connect(self.show_fitInfo)
         self.displayMenu.addAction(self.showFitInfoAction)
-        self.showConfidenceAction = QtWidgets.QAction('Show Confidence', self.displayMenu)
+        self.showConfidenceAction = QtWidgets.QAction(
+            'Show Confidence', self.displayMenu)
         self.showConfidenceAction.setCheckable(True)
         self.showConfidenceAction.triggered.connect(self.show_confidence)
         self.displayMenu.addAction(self.showConfidenceAction)
 
         self.menu.addSeparator()
-        self.menu.addAction('Draw Line', self.draw_line, QtGui.QKeySequence('Ctrl+L'))
-        self.menu.addAction('Undo Line', self.undo_line, QtGui.QKeySequence('Shift+Ctrl+L'))
-        self.menu.addAction('Get Slope', self.get_slope, QtGui.QKeySequence('Ctrl+G'))
-        self.menu.addAction('Show Slope', self.show_slope, QtGui.QKeySequence('Shift+Ctrl+G'))
+        self.menu.addAction(
+            'Draw Line',
+            self.draw_line,
+            QtGui.QKeySequence('Ctrl+L')
+        )
+        self.menu.addAction(
+            'Undo Line',
+            self.undo_line,
+            QtGui.QKeySequence('Shift+Ctrl+L')
+        )
+        self.menu.addAction(
+            'Get Slope',
+            self.get_slope,
+            QtGui.QKeySequence('Ctrl+G')
+        )
+        self.menu.addAction(
+            'Show Slope',
+            self.show_slope,
+            QtGui.QKeySequence('Shift+Ctrl+G')
+        )
 
     @property
     def fig(self):
@@ -140,13 +180,19 @@ class Ui_Fit:
             function name (a key from fitting functions dict)
 
         """
-        self.showCustomFitActions[fname] = QtWidgets.QAction(fname, self.showCustomFitActionGroup)
-        self.showCustomFitActions[fname].triggered.connect(functools.partial(self.fit, fname))
-        self.showFitMenu.insertAction(self.showFitSep, self.showCustomFitActions[fname])
+        self.showCustomFitActions[fname] = QtWidgets.QAction(
+            fname, self.showCustomFitActionGroup)
+        self.showCustomFitActions[fname].triggered.connect(
+            functools.partial(self.fit, fname))
+        self.showFitMenu.insertAction(
+            self.showFitSep, self.showCustomFitActions[fname])
 
-        self.editFitActions[fname] = QtWidgets.QAction(fname, self.editFitActionGroup)
-        self.editFitActions[fname].triggered.connect(functools.partial(self.edit_fit, fname))
-        self.editFitMenu.insertAction(self.editFitSep, self.editFitActions[fname])
+        self.editFitActions[fname] = QtWidgets.QAction(
+            fname, self.editFitActionGroup)
+        self.editFitActions[fname].triggered.connect(
+            functools.partial(self.edit_fit, fname))
+        self.editFitMenu.insertAction(
+            self.editFitSep, self.editFitActions[fname])
 
     def other_fit(self):
         pass
@@ -174,10 +220,10 @@ class Ui_Fit:
 
     def show_slope(self):
         pass
-    
+
     def show_fitInfo(self):
         pass
-    
+
     def show_confidence(self):
         pass
 
@@ -220,4 +266,3 @@ class CustomFitDialog(Ui_customFitDialog):
         """
         self.fname = self.customFitName.text()
         self.fdef = self.customFitDef.text()
-
