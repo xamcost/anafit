@@ -1,6 +1,5 @@
 import os
 import json
-import numpy
 
 # global variable
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,19 +42,23 @@ def get_func(strfunc=None, typefunc=None):
     str or dict
 
     """
-    linlist = {'constant': 'lambda x, a : a ; (1)', 
+    linlist = {'constant': 'lambda x, a : a ; (1)',
                'ax': 'lambda x, a : a*x ; (1)',
                'ax+b': 'lambda x, a, b : a*x+b ; (1, 1)',
                'a(x-b)': 'lambda x, a, b : a*(x-b) ; (1, 1)'}
     powerlist = {'ax^n': 'lambda x, a, n : a*(x**n) ; (1, 1)',
                  'a+bx^n': 'lambda x, a, b, n : a+b*(x**n) ; (1, 1, 1)',
                  'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
-                 'a+b(x-c)^n': 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
-    explist = {'exp(x/a)': 'lambda x, a : a*numpy.exp(x/a) ; (1)', 
-               'a*exp(x/b)': 'lambda x, a, b : a*numpy.exp(x/b) ; (1, 1)', 
-               'a*exp(x/b) + c': 'lambda x, a, b, c : a*numpy.exp(x/b) + c ; (1, 1, 1)', 
-               'a*exp((x-b)/c)': 'lambda x, a, b, c : a*numpy.exp((x-b)/c) ; (1, 1, 1)',
-               'a(1-exp(-x/b))': 'lambda x, a, b : a*(1 - numpy.exp(-x/b)) ; (1, 1)'}
+                 'a+b(x-c)^n':
+                 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
+    explist = {'exp(x/a)': 'lambda x, a : a*numpy.exp(x/a) ; (1)',
+               'a*exp(x/b)': 'lambda x, a, b : a*numpy.exp(x/b) ; (1, 1)',
+               'a*exp(x/b) + c':
+               'lambda x, a, b, c : a*numpy.exp(x/b) + c ; (1, 1, 1)',
+               'a*exp((x-b)/c)':
+               'lambda x, a, b, c : a*numpy.exp((x-b)/c) ; (1, 1, 1)',
+               'a(1-exp(-x/b))':
+               'lambda x, a, b : a*(1 - numpy.exp(-x/b)) ; (1, 1)'}
     custom_path = os.path.join(script_path, 'customFit.txt')
     if os.path.exists(custom_path):
         with open(custom_path, 'r') as fid:
@@ -99,9 +102,10 @@ def from_fdef(fdef):
     fstr, pstr = fdef.split(';')
     return eval(fstr), eval(pstr)
 
+
 def str_line(lin):
     """
-    Returns a string in the form 'marker' + 'linestyle' from a 
+    Returns a string in the form 'marker' + 'linestyle' from a
     matplotlib.lines.line2D object
 
     Parameters
@@ -115,9 +119,8 @@ def str_line(lin):
         string in the form 'marker' + 'linestyle'
     """
     strlin = ''
-    if lin.get_marker() is not 'None':
+    if lin.get_marker() != 'None':
         strlin = strlin + lin.get_marker()
-    if lin.get_linestyle() is not 'None':
+    if lin.get_linestyle() != 'None':
         strlin = strlin + lin.get_linestyle()
     return strlin
-
