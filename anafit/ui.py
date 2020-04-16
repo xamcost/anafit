@@ -2,8 +2,8 @@ from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 import os
 import functools
-from customFitDialog import Ui_customFitDialog
-from utilities import script_path, get_func
+from .customFitDialog import Ui_customFitDialog
+from .utilities import script_path, get_func
 
 
 class Ui_Fit:

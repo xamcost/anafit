@@ -5,16 +5,16 @@ import numpy as np
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 from scipy.optimize import curve_fit
-from ui import Ui_Fit, CustomFitDialog
-from utilities import get_func, str_line, from_fdef, save_customlist
+from .ui import Ui_Fit, CustomFitDialog
+from .utilities import get_func, str_line, from_fdef, save_customlist
+
 if 'matplotlib.pyplot' in sys.modules:
     matplotlib.pyplot.switch_backend('Qt5Agg')
 elif 'matplotlib.pylab' in sys.modules:
     matplotlib.pylab.switch_backend('Qt5Agg')
 elif matplotlib.get_backend() != 'Qt5Agg':
     matplotlib.use('Qt5Agg')
-
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa : E402
 
 
 class Fit(object):
@@ -488,7 +488,7 @@ class Figure(Ui_Fit):
             self.dataActionIcon[lin] = QtGui.QPixmap(100, 100)
             self.dataActionIcon[lin].fill(
                 QtGui.QColor(*list(map(int, 255*np.array(
-                    matplotlib.colors.to_rgb(linval.get_color()),
+                    matplotlib.colors.to_rgb(self._dictlin[lin].get_color()),
                     dtype=float)))
                     )
                 )

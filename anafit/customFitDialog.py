@@ -6,7 +6,8 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
+
 
 class Ui_customFitDialog(object):
     def setupUi(self, customFitDialog):
@@ -17,7 +18,8 @@ class Ui_customFitDialog(object):
         self.customFitButtonBox = QtWidgets.QDialogButtonBox(customFitDialog)
         self.customFitButtonBox.setGeometry(QtCore.QRect(30, 240, 341, 32))
         self.customFitButtonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.customFitButtonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.customFitButtonBox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok)
         self.customFitButtonBox.setCenterButtons(True)
         self.customFitButtonBox.setObjectName("customFitButtonBox")
         self.verticalLayoutWidget = QtWidgets.QWidget(customFitDialog)
@@ -46,7 +48,15 @@ class Ui_customFitDialog(object):
 
     def retranslateUi(self, customFitDialog):
         _translate = QtCore.QCoreApplication.translate
-        customFitDialog.setWindowTitle(_translate("customFitDialog", "New Fit Definition"))
-        self.customFitNameLabel.setText(_translate("customFitDialog", "Function name :"))
-        self.customFitDefLabel.setText(_translate("customFitDialog", "<html><head/><body><p>Definition : <span style=\" font-style:italic;\">ex: lambda x, a, b : a*(x-b)**(1/2) ; (1, 0.1)</span></p></body></html>"))
-
+        customFitDialog.setWindowTitle(
+            _translate("customFitDialog", "New Fit Definition"))
+        self.customFitNameLabel.setText(
+            _translate("customFitDialog", "Function name :"))
+        self.customFitDefLabel.setText(
+            _translate(
+                "customFitDialog",
+                ("<html><head/><body><p>Definition : <span style=\""
+                 " font-style:italic;\">ex: lambda x, a, b : a*(x-b)**(1/2)"
+                 " ; (1, 0.1)</span></p></body></html>")
+                )
+            )
