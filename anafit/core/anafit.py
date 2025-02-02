@@ -1,19 +1,20 @@
 import functools
 import sys
+
 import matplotlib
 import numpy as np
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
+from PyQt5 import QtGui, QtWidgets
 from scipy.optimize import curve_fit
-from .ui import Ui_Fit, CustomFitDialog
-from .utilities import get_func, str_line, from_fdef, save_customlist
 
-if 'matplotlib.pyplot' in sys.modules:
-    matplotlib.pyplot.switch_backend('Qt5Agg')
-elif 'matplotlib.pylab' in sys.modules:
-    matplotlib.pylab.switch_backend('Qt5Agg')
-elif matplotlib.get_backend() != 'Qt5Agg':
-    matplotlib.use('Qt5Agg')
+from ..ui import CustomFitDialog, Ui_Fit
+from ..utilities import from_fdef, get_func, save_customlist, str_line
+
+if "matplotlib.pyplot" in sys.modules:
+    matplotlib.pyplot.switch_backend("Qt5Agg")
+elif "matplotlib.pylab" in sys.modules:
+    matplotlib.pylab.switch_backend("Qt5Agg")
+elif matplotlib.get_backend() != "Qt5Agg":
+    matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt  # noqa : E402
 
 
@@ -47,8 +48,11 @@ class Fit(object):
             self._xydata = self._lin.get_xydata()
         else:
             self._xydata = np.array(
-                [xy for xy in self._lin.get_xydata()
-                    if self._xrange[0] < xy[0] < self._xrange[1]]
+                [
+                    xy
+                    for xy in self._lin.get_xydata()
+                    if self._xrange[0] < xy[0] < self._xrange[1]
+                ]
             )
         self._popt, self._pcov = None, None
         self._sigma = None
@@ -56,7 +60,7 @@ class Fit(object):
         self._up = None
         self._down = None
         self._linConfidence = None
-        if ';' not in fname:
+        if ";" not in fname:
             if p is None:
                 fdef = get_func(self._fname)
                 self._f, self._p = from_fdef(fdef)
@@ -135,28 +139,28 @@ class Fit(object):
         linfit = self._lin.axes.plot(
             self._xydata[:, 0],
             list(map(lambda x: self._f(x, *self._popt), self._xydata[:, 0])),
-            'orange'
+            "orange",
         )
         self._linfit = linfit[0]
         self._up = self._f(self._xydata[:, 0], *(self._popt + self._sigma))
         self._low = self._f(self._xydata[:, 0], *(self._popt - self._sigma))
         self._linConfidence = self._lin.axes.fill_between(
-            self._xydata[:, 0], self._low, self._up, color='black', alpha=0.15
+            self._xydata[:, 0], self._low, self._up, color="black", alpha=0.15
         )
         self._linConfidence.set_visible(showConf)
-        if ';' in self._fname:
-            fdef, _ = self._fname.split(';')
+        if ";" in self._fname:
+            fdef, _ = self._fname.split(";")
         else:
             fdef = self._fname
-            fitInfo = 'Fit ' + fdef + ' :'
+            fitInfo = "Fit " + fdef + " :"
         for coef, err in zip(self._popt, self._sigma):
-            fitInfo = fitInfo + '\n{0:.2f} +/- {1:.2f}'.format(coef, err)
+            fitInfo = fitInfo + "\n{0:.2f} +/- {1:.2f}".format(coef, err)
         xmin, xmax = self._lin.axes.get_xlim()
         dx = xmax - xmin
         ymin, ymax = self._lin.axes.get_ylim()
         dy = ymax - ymin
-        xbox = xmin + 0.05*dx
-        ybox = ymax - 0.2*dy
+        xbox = xmin + 0.05 * dx
+        ybox = ymax - 0.2 * dy
         self._fitbox = self._lin.axes.text(xbox, ybox, fitInfo)
         self._fitbox.set_visible(showInfo)
 
@@ -175,14 +179,14 @@ class Fit(object):
         plt.draw()
 
     def __repr__(self):
-        xrange = 'Xrange : [{0:.1f}, {1:.1f}]'.format(
+        xrange = "Xrange : [{0:.1f}, {1:.1f}]".format(
             np.min(self._xydata[:, 0]), np.max(self._xydata[:, 0])
         )
-        fit = 'Fitting function : ' + self._fname
-        init = 'Initialising parameters : {0}'.format(self._p)
-        coef = 'Coeff. : {0}'.format(self._popt)
-        uncert = 'Uncertainty: {0}'.format(self._sigma)
-        return fit + '\n' + xrange + '\n' + init + '\n' + coef + '\n' + uncert
+        fit = "Fitting function : " + self._fname
+        init = "Initialising parameters : {0}".format(self._p)
+        coef = "Coeff. : {0}".format(self._popt)
+        uncert = "Uncertainty: {0}".format(self._sigma)
+        return fit + "\n" + xrange + "\n" + init + "\n" + coef + "\n" + uncert
 
 
 class DrawLine(object):
@@ -207,12 +211,10 @@ class DrawLine(object):
         self.slope = show_slope
         self.pt1 = np.array(plt.ginput(1)[0])
         self.pt2 = None
-        self.lx, = self.ax.plot(*self.pt1, 'k--')
-        self.cmove = self.fig.canvas.mpl_connect(
-            'motion_notify_event', self.mouse_move
-        )
+        (self.lx,) = self.ax.plot(*self.pt1, "k--")
+        self.cmove = self.fig.canvas.mpl_connect("motion_notify_event", self.mouse_move)
         self.cclicked = self.fig.canvas.mpl_connect(
-            'button_press_event', self.mouse_clicked
+            "button_press_event", self.mouse_clicked
         )
 
     def mouse_move(self, event):
@@ -232,10 +234,11 @@ class DrawLine(object):
         if self.slope is None:
             y = event.ydata
         else:
-            if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
-                y = np.exp(
-                    np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0])
-                ) * x ** self.slope
+            if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
+                y = (
+                    np.exp(np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0]))
+                    * x**self.slope
+                )
             else:
                 y = self.slope * (x - self.pt1[0]) + self.pt1[1]
         self.lx.set_ydata([self.pt1[1], y])
@@ -257,11 +260,11 @@ class DrawLine(object):
         if self.slope is None:
             self.pt2 = [event.xdata, event.ydata]
         else:
-            self.pt2 = [event.xdata,
-                        np.exp(
-                            np.log(self.pt1[1]) -
-                            self.slope * np.log(self.pt1[0])
-                        ) * event.xdata ** self.slope]
+            self.pt2 = [
+                event.xdata,
+                np.exp(np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0]))
+                * event.xdata**self.slope,
+            ]
         self.get_slope()
         self.lx.set_xdata([self.pt1[0], self.pt2[0]])
         self.lx.set_ydata([self.pt1[1], self.pt2[1]])
@@ -284,28 +287,28 @@ class DrawLine(object):
 
         """
         if self.slope is None:
-            if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
+            if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
                 num = np.log(self.pt2[1]) - np.log(self.pt1[1])
                 denom = np.log(self.pt2[0]) - np.log(self.pt1[0])
                 self.slope = num / denom
             else:
                 num = self.pt2[1] - self.pt1[1]
                 self.slope = num / (self.pt2[0] - self.pt1[0])
-        if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
-            self.b = np.exp(
-                np.log(self.pt2[1]) - self.slope * np.log(self.pt2[0])
-            )
+        if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
+            self.b = np.exp(np.log(self.pt2[1]) - self.slope * np.log(self.pt2[0]))
         else:
             self.b = self.pt2[1] - self.slope * self.pt2[0]
         return self.slope, self.b
 
     def __repr__(self):
-        if self.ax.get_xscale() == 'log' and self.ax.get_yscale() == 'log':
-            lstr = 'Line a*x^n : a = {0:.1f} , n = {1:.1f} \n'.format(
-                self.b, self.slope)
+        if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
+            lstr = "Line a*x^n : a = {0:.1f} , n = {1:.1f} \n".format(
+                self.b, self.slope
+            )
         else:
-            lstr = 'Line a*x+b : a = {0:.1f} , b = {1:.1f} \n'.format(
-                self.slope, self.b)
+            lstr = "Line a*x+b : a = {0:.1f} , b = {1:.1f} \n".format(
+                self.slope, self.b
+            )
         return lstr
 
 
@@ -327,13 +330,21 @@ class Figure(Ui_Fit):
             fig = plt.gcf()
         self._fig = fig
         if not fig.axes:
-            raise ValueError('Needs an axis before fitting')
+            raise ValueError("Needs an axis before fitting")
         if not fig.axes[0].lines:
-            raise ValueError('Needs some points before fitting')
+            raise ValueError("Needs some points before fitting")
         super().__init__()
         self._ax = fig.axes
-        self._dictlin = {(str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin for axe in self._ax for lin in axe.get_lines()}
-        self._currentLine = str(self._ax[0].lines[0].get_color()) + self._ax[0].lines[0].get_marker() + self._ax[0].lines[0].get_linestyle()
+        self._dictlin = {
+            (str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin
+            for axe in self._ax
+            for lin in axe.get_lines()
+        }
+        self._currentLine = (
+            str(self._ax[0].lines[0].get_color())
+            + self._ax[0].lines[0].get_marker()
+            + self._ax[0].lines[0].get_linestyle()
+        )
         self._fits = []
         self._lastFit = []
         self._drawnLines = []
@@ -348,58 +359,65 @@ class Figure(Ui_Fit):
         for lin, linval in self._dictlin.items():
             strlin = str_line(linval)
             self.dataAction[lin] = QtWidgets.QAction(strlin, self.datasetMenu)
-            self.dataAction[lin].triggered.connect(functools.partial(
-                self.set_current_line, lin))
-            self.datasetMenu.insertAction(
-                self.datasetSep, self.dataAction[lin])
+            self.dataAction[lin].triggered.connect(
+                functools.partial(self.set_current_line, lin)
+            )
+            self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
             self.dataAction[lin].setCheckable(True)
             self.dataActionIcon[lin] = QtGui.QPixmap(100, 100)
             self.dataActionIcon[lin].fill(
                 QtGui.QColor(
-                    *list(map(int, 255*np.array(
-                        matplotlib.colors.to_rgb(linval.get_color()),
-                        dtype=float
-                    )))
+                    *list(
+                        map(
+                            int,
+                            255
+                            * np.array(
+                                matplotlib.colors.to_rgb(linval.get_color()),
+                                dtype=float,
+                            ),
+                        )
+                    )
                 )
             )
             self.dataAction[lin].setIcon(QtGui.QIcon(self.dataActionIcon[lin]))
         self.dataAction[self._currentLine].setChecked(True)
 
         # Populating linear fits
-        for fname in get_func(typefunc='linear').keys():
-            self.linearFitMenu.addAction(
-                fname, functools.partial(self.fit, fname))
+        for fname in get_func(typefunc="linear").keys():
+            self.linearFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating power fits
-        for fname in get_func(typefunc='power').keys():
-            self.powerFitMenu.addAction(
-                fname, functools.partial(self.fit, fname))
+        for fname in get_func(typefunc="power").keys():
+            self.powerFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating exp fits
-        for fname in get_func(typefunc='exp').keys():
-            self.expFitMenu.addAction(
-                fname, functools.partial(self.fit, fname))
+        for fname in get_func(typefunc="exp").keys():
+            self.expFitMenu.addAction(fname, functools.partial(self.fit, fname))
 
         # Populating custom fits
-        for fname in get_func(typefunc='custom').keys():
+        for fname in get_func(typefunc="custom").keys():
             self.showCustomFitActions[fname] = QtWidgets.QAction(
-                fname, self.showCustomFitActionGroup)
+                fname, self.showCustomFitActionGroup
+            )
             self.showCustomFitActions[fname].triggered.connect(
-                functools.partial(self.fit, fname))
-            self.showCustomFitActionGroup.addAction(
-                self.showCustomFitActions[fname])
+                functools.partial(self.fit, fname)
+            )
+            self.showCustomFitActionGroup.addAction(self.showCustomFitActions[fname])
         self.showFitMenu.insertActions(
-            self.showFitSep, self.showCustomFitActionGroup.actions())
+            self.showFitSep, self.showCustomFitActionGroup.actions()
+        )
 
-        for fname in get_func(typefunc='custom').keys():
+        for fname in get_func(typefunc="custom").keys():
             self.editFitActions[fname] = QtWidgets.QAction(
-                fname, self.editFitActionGroup)
+                fname, self.editFitActionGroup
+            )
             self.editFitActions[fname].triggered.connect(
-                functools.partial(self.edit_fit, fname))
-            self.editFitActionGroup.addAction(
-                self.editFitActions[fname])
+                functools.partial(self.edit_fit, fname)
+            )
+            self.editFitActionGroup.addAction(self.editFitActions[fname])
         self.editFitMenu.insertActions(
-            self.editFitSep, self.editFitActionGroup.actions())
+            self.editFitSep, self.editFitActionGroup.actions()
+        )
 
     @property
     def fig(self):
@@ -476,22 +494,36 @@ class Figure(Ui_Fit):
         Slot to refresh dataset menu, for instance if a new plot has been added
         after anafit.Figure() called
         """
-        newlin = {(str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin for axe in self._ax for lin in axe.get_lines()}
+        newlin = {
+            (str(lin.get_color()) + lin.get_marker() + lin.get_linestyle()): lin
+            for axe in self._ax
+            for lin in axe.get_lines()
+        }
         for lin in set(newlin.keys()).difference(self._dictlin.keys()):
             strlin = str_line(newlin[lin])
             self.dataAction[lin] = QtWidgets.QAction(strlin, self.datasetMenu)
             self.dataAction[lin].triggered.connect(
-                functools.partial(self.set_current_line, lin))
-            self.datasetMenu.insertAction(
-                self.datasetSep, self.dataAction[lin])
+                functools.partial(self.set_current_line, lin)
+            )
+            self.datasetMenu.insertAction(self.datasetSep, self.dataAction[lin])
             self.dataAction[lin].setCheckable(True)
             self.dataActionIcon[lin] = QtGui.QPixmap(100, 100)
             self.dataActionIcon[lin].fill(
-                QtGui.QColor(*list(map(int, 255*np.array(
-                    matplotlib.colors.to_rgb(self._dictlin[lin].get_color()),
-                    dtype=float)))
+                QtGui.QColor(
+                    *list(
+                        map(
+                            int,
+                            255
+                            * np.array(
+                                matplotlib.colors.to_rgb(
+                                    self._dictlin[lin].get_color()
+                                ),
+                                dtype=float,
+                            ),
+                        )
                     )
                 )
+            )
             self.dataAction[lin].setIcon(QtGui.QIcon(self.dataActionIcon[lin]))
         for lin in set(self._dictlin.keys()).difference(newlin.keys()):
             self.datasetMenu.removeAction(self.dataAction[lin])
@@ -500,9 +532,11 @@ class Figure(Ui_Fit):
         self._dictlin = newlin
         for key in self._dictlin.keys():
             self.dataAction[key].setChecked(False)
-        self._currentLine = str(self._ax[0].lines[0].get_color()) \
-            + self._ax[0].lines[0].get_marker() \
+        self._currentLine = (
+            str(self._ax[0].lines[0].get_color())
+            + self._ax[0].lines[0].get_marker()
             + self._ax[0].lines[0].get_linestyle()
+        )
         self.dataAction[self._currentLine].setChecked(True)
 
     def define_range(self):
@@ -511,14 +545,13 @@ class Figure(Ui_Fit):
         the xrange to consider for fitting
         """
         xrange, ok = QtWidgets.QInputDialog.getText(
-            self.showFitMenu,
-            'Enter the x-range where to fit',
-            'ex: (10, 100) :'
+            self.showFitMenu, "Enter the x-range where to fit", "ex: (10, 100) :"
         )
         if ok:
             self._xrange = eval(xrange)
             self.rangeAction.setText(
-                'Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
+                "Current : ({0:.1f}, {1:.1f})".format(*self._xrange)
+            )
         else:
             pass
 
@@ -531,15 +564,14 @@ class Figure(Ui_Fit):
             self._xrange = (pts[0][0], pts[1][0])
         else:
             self._xrange = (pts[1][0], pts[0][0])
-        self.rangeAction.setText(
-            'Current : ({0:.1f}, {1:.1f})'.format(*self._xrange))
+        self.rangeAction.setText("Current : ({0:.1f}, {1:.1f})".format(*self._xrange))
 
     def reset_range(self):
         """
         Slot to reset the xr-fitting range, therefore using the full range
         """
         self._xrange = None
-        self.rangeAction.setText('Current : full')
+        self.rangeAction.setText("Current : full")
 
     def fit(self, strfunc):
         """
@@ -555,13 +587,11 @@ class Figure(Ui_Fit):
             self._fits[-1].show_fitInfo(False)
         except IndexError:
             pass
-        self._fits.append(Fit(
-            self._dictlin[self._currentLine],
-            self._xrange, strfunc)
-        )
+        self._fits.append(Fit(self._dictlin[self._currentLine], self._xrange, strfunc))
         self._lastFit = self._fits[-1]
-        self._lastFit.plot(self.showFitInfoAction.isChecked(),
-                           self.showConfidenceAction.isChecked())
+        self._lastFit.plot(
+            self.showFitInfoAction.isChecked(), self.showConfidenceAction.isChecked()
+        )
         print(self._lastFit)
         self.fig.canvas.draw()
 
@@ -572,8 +602,8 @@ class Figure(Ui_Fit):
         """
         fdef, ok = QtWidgets.QInputDialog.getText(
             self.showFitMenu,
-            'Enter your fitting function',
-            'ex: lambda x, a, b : a*x+b ; (1, 0.1) :'
+            "Enter your fitting function",
+            "ex: lambda x, a, b : a*x+b ; (1, 0.1) :",
         )
         if ok:
             self.fit(fdef)
@@ -594,7 +624,7 @@ class Figure(Ui_Fit):
         editFitDialog = CustomFitDialog(efDialog, fname)
         efDialog.show()
         if efDialog.exec_() == QtWidgets.QDialog.Accepted:
-            customlist = get_func(typefunc='custom')
+            customlist = get_func(typefunc="custom")
             del customlist[fname]
             self.showFitMenu.removeAction(self.showCustomFitActions[fname])
             self.editFitMenu.removeAction(self.editFitActions[fname])
@@ -613,7 +643,7 @@ class Figure(Ui_Fit):
         customFitDialog = CustomFitDialog(cfDialog)
         cfDialog.show()
         if cfDialog.exec_() == QtWidgets.QDialog.Accepted:
-            customlist = get_func(typefunc='custom')
+            customlist = get_func(typefunc="custom")
             customlist[customFitDialog.fname] = customFitDialog.fdef
             save_customlist(customlist)
             self.add_fit_in_menu(customFitDialog.fname)
@@ -625,13 +655,13 @@ class Figure(Ui_Fit):
         Slot to delete all custom fitting functions and refresh the Show Fit
         menu and Edit User Fit menu
         """
-        fits = set(self.showCustomFitActions.keys()).difference(['a(x-b)^2'])
+        fits = set(self.showCustomFitActions.keys()).difference(["a(x-b)^2"])
         for k in fits:
             self.showFitMenu.removeAction(self.showCustomFitActions[k])
-        for k in set(self.editFitActions.keys()).difference(['a(x-b)^2']):
+        for k in set(self.editFitActions.keys()).difference(["a(x-b)^2"]):
             self.editFitMenu.removeAction(self.editFitActions[k])
-        self.add_fit_in_menu('a(x-b)^2')
-        customlist = {'a(x-b)^2': 'lambda x, a, b : a*(x-b)**2 ; (1, 1)'}
+        self.add_fit_in_menu("a(x-b)^2")
+        customlist = {"a(x-b)^2": "lambda x, a, b : a*(x-b)**2 ; (1, 1)"}
         save_customlist(customlist)
 
     def draw_line(self):
@@ -680,9 +710,9 @@ class Figure(Ui_Fit):
         Slot to draw a line corresponding to a given slope if scale is lin-lin,
         or to a given exponent if scale is log-log.
         """
-        slope, ok = QtWidgets.QInputDialog.getText(self.menu,
-                                                   'Enter the slope to show',
-                                                   'ex: -1')
+        slope, ok = QtWidgets.QInputDialog.getText(
+            self.menu, "Enter the slope to show", "ex: -1"
+        )
         if ok:
             self._lines.append(DrawLine(self._fig, show_slope=eval(slope)))
         else:
@@ -709,19 +739,19 @@ if __name__ == "__main__":
     plt.ion()
     my_fig = plt.figure()
     ax = my_fig.add_subplot(111)
-    my_line, = ax.plot(
+    (my_line,) = ax.plot(
         np.arange(0, 100, 1),
         np.arange(50, 250, 2) + 10 * (np.random.rand(100) - 1 / 2),
-        'b+'
+        "b+",
     )
     ax.plot(
         np.arange(0, 100, 1),
         np.arange(0, 300, 3) + 30 * (np.random.rand(100) - 1 / 2),
-        'rx'
+        "rx",
     )
     ax.plot(
         np.arange(0, 100, 1),
         np.square(np.arange(0, 10, 0.1)) + 5 * (np.random.rand(100) - 1 / 2),
-        'k.'
+        "k.",
     )
     test = Figure(my_fig)

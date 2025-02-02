@@ -1,1 +1,1 @@
-from .anafit import Figure, Fit
+from .core import Figure, Fit
