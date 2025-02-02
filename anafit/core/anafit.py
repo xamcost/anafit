@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt  # noqa : E402
 
 
 class Fit(object):
-    def __init__(self, line, xrange, fname, p=None):
+    def __init__(self, line, fname, xrange=None, p=None):
         """
         Class containing all information corresponding to a fitted set of data:
         the xy sets of data, the fitting function, its parameters and their
@@ -31,10 +31,10 @@ class Fit(object):
 
         line: matplotlib.lines.Line2D object
             matplotlib Line2D object corresponding to the curve to fit
-        xrange: tuple
-            tuple defining the range of data to consider when fitting
         fname: str
             fitting function name (a key from fitting functions dict)
+        xrange: tuple, optional
+            tuple defining the range of data to consider when fitting
         p: tuple, optional
             if provided, the initialising parameters contained in the string
             definition of the fitting function are ignored and set to p
@@ -70,7 +70,6 @@ class Fit(object):
                 self._p = p
         else:
             self._f, self._p = from_fdef(fname)
-        self.fit()
 
     @property
     def linfit(self):
@@ -82,7 +81,8 @@ class Fit(object):
 
     @xrange.setter
     def xrange(self, xrange):
-        self.__init__(self._lin, xrange, self._fname)
+        self.__init__(self._lin, self._fname, xrange)
+        self.fit()
 
     @property
     def fname(self):
@@ -90,7 +90,8 @@ class Fit(object):
 
     @fname.setter
     def fname(self, fname):
-        self.__init__(self._lin, self._xrange, fname)
+        self.__init__(self._lin, fname, self._xrange)
+        self.fit()
 
     @property
     def xydata(self):
@@ -587,7 +588,10 @@ class Figure(Ui_Fit):
             self._fits[-1].show_fitInfo(False)
         except IndexError:
             pass
-        self._fits.append(Fit(self._dictlin[self._currentLine], self._xrange, strfunc))
+
+        new_fit = Fit(self._dictlin[self._currentLine], strfunc, self._xrange)
+        new_fit.fit()
+        self._fits.append(new_fit)
         self._lastFit = self._fits[-1]
         self._lastFit.plot(
             self.showFitInfoAction.isChecked(), self.showConfidenceAction.isChecked()
