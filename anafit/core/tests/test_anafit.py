@@ -14,6 +14,7 @@ class TestFit(TestCase):
         self.x = np.arange(0, 10, 1)
         noise = [-1, 1] * 5
         self.y = 2 * self.x + 5 + noise
+        self.xy = np.transpose((self.x, self.y))
         (self.line,) = self.ax.plot(self.x, self.y)
 
         # Expected values from initialisation of Fit object
@@ -35,7 +36,7 @@ class TestFit(TestCase):
         fit = Fit(self.line, self.fname)
 
         # Then
-        np.testing.assert_array_almost_equal(fit.xydata, np.transpose((self.x, self.y)))
+        np.testing.assert_array_almost_equal(fit.xydata, self.xy)
         np.testing.assert_array_almost_equal(
             fit.f(self.x, *self.p_init), self.linear(self.x, *self.p_init)
         )
@@ -79,7 +80,7 @@ class TestFit(TestCase):
         fit = Fit(self.line, fname)
 
         # Then
-        np.testing.assert_array_almost_equal(fit.xydata, np.transpose((self.x, self.y)))
+        np.testing.assert_array_almost_equal(fit.xydata, self.xy)
         np.testing.assert_array_almost_equal(
             fit.f(self.x, *p_init), self.linear(self.x, *p_init)
         )
@@ -151,7 +152,10 @@ class TestFit(TestCase):
         # Given
         fit = Fit(self.line, self.fname)
         fname = "lambda x, a : a*x + 5 ; (0.5)"
-        linear = lambda x, a: a * x + 5
+
+        def linear(x, a):
+            return a * x + 5
+
         p_init = (0.5,)
         pop_expected, pcov_expected, sigma_expected = self.get_expected_fit(
             linear,
@@ -170,3 +174,136 @@ class TestFit(TestCase):
         np.testing.assert_array_almost_equal(fit.popt, pop_expected)
         np.testing.assert_array_almost_equal(fit.pcov, pcov_expected)
         np.testing.assert_array_almost_equal(fit.sigma, sigma_expected)
+
+    def test_plot(self):
+        # Test if the plot method correctly plots the fit and sets the confidence
+        # intervals
+
+        # Given
+        fit = Fit(self.line, self.fname)
+        fit.fit()
+        popt_expected, pcov_expected, sigma_expected = self.get_expected_fit(
+            self.linear, self.x, self.y, self.p_init
+        )
+        up_expected = self.linear(self.x, *(popt_expected + sigma_expected))
+        low_expected = self.linear(self.x, *(popt_expected - sigma_expected))
+
+        # When
+        fit.plot()
+
+        # Then
+        np.testing.assert_array_almost_equal(fit.linfit.get_xdata(), self.x)
+        np.testing.assert_array_almost_equal(
+            fit.linfit.get_ydata(), self.linear(self.x, *popt_expected)
+        )
+        np.testing.assert_array_almost_equal(fit.upConfidence, up_expected)
+        np.testing.assert_array_almost_equal(fit.lowConfidence, low_expected)
+        self.assertTrue(fit._linfit.get_visible())
+        self.assertFalse(fit._linConfidence.get_visible())
+        self.assertFalse(fit._fitbox.get_visible())
+        self.assertEqual(
+            fit._fitbox.get_text(),
+            (
+                f"Fit {self.fname} :\n"
+                f"{popt_expected[0]:.2f} +/- {sigma_expected[0]:.2f}\n"
+                f"{popt_expected[1]:.2f} +/- {sigma_expected[1]:.2f}"
+            ),
+        )
+
+    def test_plot_show_confidence_and_fitbox(self):
+        # Test if the plot method correctly plots the fit, the confidence intervals
+        # and the fitbox
+
+        # Given
+        fit = Fit(self.line, self.fname)
+        fit.fit()
+        popt_expected, pcov_expected, sigma_expected = self.get_expected_fit(
+            self.linear, self.x, self.y, self.p_init
+        )
+        up_expected = self.linear(self.x, *(popt_expected + sigma_expected))
+        low_expected = self.linear(self.x, *(popt_expected - sigma_expected))
+
+        # When
+        fit.plot(showInfo=True, showConf=True)
+
+        # Then
+        np.testing.assert_array_almost_equal(fit.linfit.get_xdata(), self.x)
+        np.testing.assert_array_almost_equal(
+            fit.linfit.get_ydata(), self.linear(self.x, *popt_expected)
+        )
+        np.testing.assert_array_almost_equal(fit.upConfidence, up_expected)
+        np.testing.assert_array_almost_equal(fit.lowConfidence, low_expected)
+        self.assertTrue(fit._linfit.get_visible())
+        self.assertTrue(fit._linConfidence.get_visible())
+        self.assertTrue(fit._fitbox.get_visible())
+        self.assertEqual(
+            fit._fitbox.get_text(),
+            (
+                f"Fit {self.fname} :\n"
+                f"{popt_expected[0]:.2f} +/- {sigma_expected[0]:.2f}\n"
+                f"{popt_expected[1]:.2f} +/- {sigma_expected[1]:.2f}"
+            ),
+        )
+
+    def test_show_fitInfo(self):
+        # Given
+        fit = Fit(self.line, self.fname)
+        fit.fit()
+        fit.plot()
+
+        # When
+        fit.show_fitInfo(disp=True)
+
+        # Then
+        self.assertTrue(fit._fitbox.get_visible())
+
+    def test_show_confidence(self):
+        # Given
+        fit = Fit(self.line, self.fname)
+        fit.fit()
+        fit.plot()
+
+        # When
+        fit.show_confidence(disp=True)
+
+        # Then
+        self.assertTrue(fit._linConfidence.get_visible())
+
+    def test_repr_no_fit(self):
+        # Given
+        fit = Fit(self.line, self.fname)
+
+        # When
+        fit_repr = str(fit)
+
+        # Then
+        self.assertEqual(
+            fit_repr,
+            (
+                f"Fitting function : {self.fname}\n"
+                f"Xrange : [{fit.xydata[0, 0]}, {fit.xydata[-1, 0]}]\n"
+                f"Initialising parameters : {self.p_init}\n"
+                f"Coeff. : None\n"
+                f"Uncertainty : None"
+            ),
+        )
+
+    def test_repr_with_fit(self):
+        # Given
+        fit = Fit(self.line, self.fname)
+        fit.fit()
+
+        # When
+        fit_repr = str(fit)
+
+        # Then
+        self.assertEqual(
+            fit_repr,
+            (
+                f"Fitting function : {self.fname}\n"
+                f"Xrange : [{fit.xydata[0, 0]}, {fit.xydata[-1, 0]}]\n"
+                f"Initialising parameters : {self.p_init}\n"
+                f"Coeff. : {fit.popt}\n"
+                f"Uncertainty : {fit.sigma}"
+            ),
+        )

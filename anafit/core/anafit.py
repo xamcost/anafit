@@ -122,11 +122,18 @@ class Fit(object):
     def sigma(self):
         return self._sigma
 
+    @property
+    def upConfidence(self):
+        return self._up
+
+    @property
+    def lowConfidence(self):
+        return self._low
+
     def fit(self):
         """
         Fit the datas contained in self._lin with the function self._fname, in
         the range self._xrange.
-
         """
         self._popt, self._pcov = curve_fit(
             self._f, self._xydata[:, 0], self._xydata[:, 1], p0=self._p
@@ -136,6 +143,13 @@ class Fit(object):
     def plot(self, showInfo=False, showConf=False):
         """
         Plots the fitted datas.
+
+        Parameters
+        ----------
+        showInfo: bool
+            if True, displays a text box containing the fit function and coefficients
+        showConf: bool
+            if True, displays the range of confidence around the fitted curve
         """
         linfit = self._lin.axes.plot(
             self._xydata[:, 0],
@@ -168,6 +182,11 @@ class Fit(object):
     def show_fitInfo(self, disp=False):
         """
         Displays a text box containing some fit infos on the figure.
+
+        Parameters
+        ----------
+        disp: bool
+            if True, displays the text box, else hides it.
         """
         self._fitbox.set_visible(disp)
         plt.draw()
@@ -175,6 +194,11 @@ class Fit(object):
     def show_confidence(self, disp=False):
         """
         Displays the range of confidence around the fitted curve.
+
+        Parameters
+        ----------
+        disp: bool
+            if True, displays the confidence range, else hides it.
         """
         self._linConfidence.set_visible(disp)
         plt.draw()
@@ -186,7 +210,7 @@ class Fit(object):
         fit = "Fitting function : " + self._fname
         init = "Initialising parameters : {0}".format(self._p)
         coef = "Coeff. : {0}".format(self._popt)
-        uncert = "Uncertainty: {0}".format(self._sigma)
+        uncert = "Uncertainty : {0}".format(self._sigma)
         return fit + "\n" + xrange + "\n" + init + "\n" + coef + "\n" + uncert
 
 
