@@ -372,7 +372,6 @@ class Figure(Ui_Fit):
         )
         self._fits = []
         self._lastFit = []
-        self._drawnLines = []
         self._lastLine = []
         self._xrange = None
         self._lines = []
@@ -697,7 +696,6 @@ class Figure(Ui_Fit):
         Slot to dynamically draw a line on the figure window
         """
         dlin = DrawLine(self._fig)
-        self._drawnLines.append(dlin)
         self._lastLine = dlin
         self._lines.append(dlin)
 
@@ -707,9 +705,12 @@ class Figure(Ui_Fit):
         """
         if self._lines:
             self._lines[-1].lx.remove()
-            del self._lines[-1]
-            del self._drawnLines[-1]
-            self._lastLine = []
+            self._lines.pop()
+            try:
+                self._lastLine = self._lines[-1]
+            except IndexError:
+                self._lastLine = None
+
             self.fig.canvas.draw()
 
     def remove_all_lines(self):
@@ -720,6 +721,7 @@ class Figure(Ui_Fit):
         for lin in self._lines:
             lin.lx.remove()
         self._lines = []
+        self._lastLine = []
         self.fig.canvas.draw()
 
     def get_slope(self):
@@ -742,7 +744,8 @@ class Figure(Ui_Fit):
             self.menu, "Enter the slope to show", "ex: -1"
         )
         if ok:
-            self._lines.append(DrawLine(self._fig, show_slope=eval(slope)))
+            lin = DrawLine(self._fig, show_slope=float(slope))
+            self._lines.append(lin)
         else:
             pass
 
