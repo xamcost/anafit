@@ -284,7 +284,7 @@ class TestFit(TestCase):
                 f"Xrange : [{fit.xydata[0, 0]}, {fit.xydata[-1, 0]}]\n"
                 f"Initialising parameters : {self.p_init}\n"
                 f"Coeff. : None\n"
-                f"Uncertainty : None"
+                f"Uncertainty : None\n"
             ),
         )
 
@@ -304,6 +304,6 @@ class TestFit(TestCase):
                 f"Xrange : [{fit.xydata[0, 0]}, {fit.xydata[-1, 0]}]\n"
                 f"Initialising parameters : {self.p_init}\n"
                 f"Coeff. : {fit.popt}\n"
-                f"Uncertainty : {fit.sigma}"
+                f"Uncertainty : {fit.sigma}\n"
             ),
         )

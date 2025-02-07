@@ -211,7 +211,7 @@ class Fit(object):
         init = "Initialising parameters : {0}".format(self._p)
         coef = "Coeff. : {0}".format(self._popt)
         uncert = "Uncertainty : {0}".format(self._sigma)
-        return fit + "\n" + xrange + "\n" + init + "\n" + coef + "\n" + uncert
+        return fit + "\n" + xrange + "\n" + init + "\n" + coef + "\n" + uncert + "\n"
 
 
 class DrawLine(object):
