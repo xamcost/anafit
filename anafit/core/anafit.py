@@ -371,8 +371,8 @@ class Figure(Ui_Fit):
             + self._ax[0].lines[0].get_linestyle()
         )
         self._fits = []
-        self._lastFit = []
-        self._lastLine = []
+        self._lastFit = None
+        self._lastLine = None
         self._xrange = None
         self._lines = []
 
@@ -498,7 +498,7 @@ class Figure(Ui_Fit):
             self._lastFit = self._fits[-1]
             self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
         except IndexError:
-            self._lastFit = []
+            self._lastFit = None
         self.fig.canvas.draw()
 
     def remove_all_fit(self):
@@ -508,9 +508,9 @@ class Figure(Ui_Fit):
         for f in self.fits:
             f.linfit.remove()
             f.show_confidence(False)
-        self._lastFit.show_fitInfo(False)
+            f.show_fitInfo(False)
         self._fits = []
-        self._lastFit = []
+        self._lastFit = None
         self.fig.canvas.draw()
 
     def refresh_dataset(self):
@@ -721,7 +721,7 @@ class Figure(Ui_Fit):
         for lin in self._lines:
             lin.lx.remove()
         self._lines = []
-        self._lastLine = []
+        self._lastLine = None
         self.fig.canvas.draw()
 
     def get_slope(self):
@@ -746,6 +746,7 @@ class Figure(Ui_Fit):
         if ok:
             lin = DrawLine(self._fig, show_slope=float(slope))
             self._lines.append(lin)
+            self._lastLine = lin
         else:
             pass
 
@@ -753,7 +754,7 @@ class Figure(Ui_Fit):
         """
         Slot to show a text box containing some fit infos of the last fit.
         """
-        if self._lastFit == []:
+        if self._lastFit is None:
             return
         else:
             self._lastFit.show_fitInfo(self.showFitInfoAction.isChecked())
