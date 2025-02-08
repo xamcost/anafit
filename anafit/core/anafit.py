@@ -285,11 +285,17 @@ class DrawLine(object):
         if self.slope is None:
             self.pt2 = [event.xdata, event.ydata]
         else:
-            self.pt2 = [
-                event.xdata,
-                np.exp(np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0]))
-                * event.xdata**self.slope,
-            ]
+            if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
+                self.pt2 = [
+                    event.xdata,
+                    np.exp(np.log(self.pt1[1]) - self.slope * np.log(self.pt1[0]))
+                    * event.xdata**self.slope,
+                ]
+            else:
+                self.pt2 = [
+                    event.xdata,
+                    self.slope * (event.xdata - self.pt1[0]) + self.pt1[1],
+                ]
         self.get_slope()
         self.lx.set_xdata([self.pt1[0], self.pt2[0]])
         self.lx.set_ydata([self.pt1[1], self.pt2[1]])
@@ -322,7 +328,10 @@ class DrawLine(object):
         if self.ax.get_xscale() == "log" and self.ax.get_yscale() == "log":
             self.b = np.exp(np.log(self.pt2[1]) - self.slope * np.log(self.pt2[0]))
         else:
-            self.b = self.pt2[1] - self.slope * self.pt2[0]
+            if self.pt1[0] < self.pt2[0]:
+                self.b = self.pt1[1] - self.slope * self.pt1[0]
+            else:
+                self.b = self.pt2[1] - self.slope * self.pt2[0]
         return self.slope, self.b
 
     def __repr__(self):
