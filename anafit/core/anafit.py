@@ -154,7 +154,6 @@ class Fit(object):
         linfit = self._lin.axes.plot(
             self._xydata[:, 0],
             list(map(lambda x: self._f(x, *self._popt), self._xydata[:, 0])),
-            "orange",
         )
         self._linfit = linfit[0]
         self._up = self._f(self._xydata[:, 0], *(self._popt + self._sigma))
