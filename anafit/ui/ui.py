@@ -3,8 +3,10 @@ import os
 
 from PyQt5 import QtGui, QtWidgets
 
-from ..utilities import get_func, script_path
+from ..utilities import get_func
 from .customFitDialog import Ui_customFitDialog
+
+ui_path = os.path.dirname(os.path.abspath(__file__))
 
 
 class Ui_Fit:
@@ -16,8 +18,7 @@ class Ui_Fit:
         """
 
         self.button = QtWidgets.QToolButton()
-        self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.button.setIcon(QtGui.QIcon(os.path.join(script_path, "ana_icon.png")))
+        self.button.setIcon(QtGui.QIcon(os.path.join(ui_path, "ana_icon.png")))
         self.button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.menu = QtWidgets.QMenu()
         self.button.setMenu(self.menu)
