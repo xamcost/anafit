@@ -1,5 +1,7 @@
-import os
 import json
+import os
+
+import numpy as np
 
 # global variable
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +19,7 @@ def save_customlist(customlist):
         Ex : {'funcName':'lambda x, a, b : a*x+b ; (1, 0.1)'}
 
     """
-    with open(os.path.join(script_path, 'customFit.txt'), 'w') as fid:
+    with open(os.path.join(script_path, "customFit.txt"), "w") as fid:
         json.dump(customlist, fid, indent=2, sort_keys=True)
 
 
@@ -42,26 +44,28 @@ def get_func(strfunc=None, typefunc=None):
     str or dict
 
     """
-    linlist = {'constant': 'lambda x, a : a ; (1)',
-               'ax': 'lambda x, a : a*x ; (1)',
-               'ax+b': 'lambda x, a, b : a*x+b ; (1, 1)',
-               'a(x-b)': 'lambda x, a, b : a*(x-b) ; (1, 1)'}
-    powerlist = {'ax^n': 'lambda x, a, n : a*(x**n) ; (1, 1)',
-                 'a+bx^n': 'lambda x, a, b, n : a+b*(x**n) ; (1, 1, 1)',
-                 'a(x-b)^n': 'lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)',
-                 'a+b(x-c)^n':
-                 'lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)'}
-    explist = {'exp(x/a)': 'lambda x, a : a*numpy.exp(x/a) ; (1)',
-               'a*exp(x/b)': 'lambda x, a, b : a*numpy.exp(x/b) ; (1, 1)',
-               'a*exp(x/b) + c':
-               'lambda x, a, b, c : a*numpy.exp(x/b) + c ; (1, 1, 1)',
-               'a*exp((x-b)/c)':
-               'lambda x, a, b, c : a*numpy.exp((x-b)/c) ; (1, 1, 1)',
-               'a(1-exp(-x/b))':
-               'lambda x, a, b : a*(1 - numpy.exp(-x/b)) ; (1, 1)'}
-    custom_path = os.path.join(script_path, 'customFit.txt')
+    linlist = {
+        "constant": "lambda x, a : a ; (1)",
+        "ax": "lambda x, a : a*x ; (1)",
+        "ax+b": "lambda x, a, b : a*x+b ; (1, 1)",
+        "a(x-b)": "lambda x, a, b : a*(x-b) ; (1, 1)",
+    }
+    powerlist = {
+        "ax^n": "lambda x, a, n : a*(x**n) ; (1, 1)",
+        "a+bx^n": "lambda x, a, b, n : a+b*(x**n) ; (1, 1, 1)",
+        "a(x-b)^n": "lambda x, a, b, n : a*((x-b)**n) ; (1, 1, 1)",
+        "a+b(x-c)^n": "lambda x, a, b, c, n : a+b*((x-c)**n) ; (1, 1, 1, 1)",
+    }
+    explist = {
+        "exp(x/a)": "lambda x, a : np.exp(x/a) ; (1)",
+        "a*exp(x/b)": "lambda x, a, b : a*np.exp(x/b) ; (1, 1)",
+        "a*exp(x/b) + c": "lambda x, a, b, c : a*np.exp(x/b) + c ; (1, 1, 1)",
+        "a*exp((x-b)/c)": "lambda x, a, b, c : a*np.exp((x-b)/c) ; (1, 1, 1)",
+        "a(1-exp(-x/b))": "lambda x, a, b : a*(1 - np.exp(-x/b)) ; (1, 1)",
+    }
+    custom_path = os.path.join(script_path, "customFit.txt")
     if os.path.exists(custom_path):
-        with open(custom_path, 'r') as fid:
+        with open(custom_path, "r") as fid:
             customlist = json.load(fid)
     else:
         customlist = {}
@@ -69,13 +73,13 @@ def get_func(strfunc=None, typefunc=None):
     if strfunc is None:
         if typefunc is None:
             return funclist
-        elif typefunc == 'linear':
+        elif typefunc == "linear":
             return linlist
-        elif typefunc == 'power':
+        elif typefunc == "power":
             return powerlist
-        elif typefunc == 'exp':
+        elif typefunc == "exp":
             return explist
-        elif typefunc == 'custom':
+        elif typefunc == "custom":
             return customlist
     else:
         return funclist[strfunc]
@@ -99,7 +103,7 @@ def from_fdef(fdef):
         initialising parameters' values
 
     """
-    fstr, pstr = fdef.split(';')
+    fstr, pstr = fdef.split(";")
     return eval(fstr), eval(pstr)
 
 
@@ -118,9 +122,9 @@ def str_line(lin):
     strlin: str
         string in the form 'marker' + 'linestyle'
     """
-    strlin = ''
-    if lin.get_marker() != 'None':
+    strlin = ""
+    if lin.get_marker() != "None":
         strlin = strlin + lin.get_marker()
-    if lin.get_linestyle() != 'None':
+    if lin.get_linestyle() != "None":
         strlin = strlin + lin.get_linestyle()
     return strlin
